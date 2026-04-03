@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "ビチクフォリオ",
+    "slug": "bichiku-folio",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true
+    },
+    "android": {
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "bichiku-folio",
+    "plugins": [
+      "expo-asset"
+    ]
+  }
+}
