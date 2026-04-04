@@ -114,6 +114,9 @@ export const EditModal = ({ visible, item, onClose, onSave, onDelete }: EditModa
   const expiryParsed = parseExpiryInput(expiry);
   const expiryWareki = expiryParsed ? toWareki(expiryParsed) : '';
 
+  // item が null の時は何もレンダリングしない（クラッシュ防止）
+  if (!item) return null;
+
   return (
     <Modal
       visible={visible}

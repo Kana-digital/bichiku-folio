@@ -17,6 +17,7 @@ import { EditModal } from './src/components/EditModal';
 import { ConsumeModal } from './src/components/ConsumeModal';
 import { MessageInbox } from './src/components/MessageInbox';
 import { SwipeWrapper } from './src/components/SwipeWrapper';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { StockItem } from './src/types';
 
 const Tab = createBottomTabNavigator();
@@ -130,6 +131,7 @@ export default function App() {
   );
 
   return (
+    <ErrorBoundary>
     <SafeAreaProvider>
       <StatusBar style="light" />
       <NavigationContainer ref={navigationRef}>
@@ -284,6 +286,7 @@ export default function App() {
         onClose={() => setInboxVisible(false)}
       />
     </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

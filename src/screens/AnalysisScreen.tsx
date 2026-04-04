@@ -21,8 +21,11 @@ interface AnalysisScreenProps {
   regionDays: number;
 }
 
-const daysUntil = (d: string) =>
-  Math.ceil((new Date(d).getTime() - new Date('2026-04-02').getTime()) / 86400000);
+const daysUntil = (d: string) => {
+  const t = new Date(d).getTime();
+  if (isNaN(t)) return 0;
+  return Math.ceil((t - Date.now()) / 86400000);
+};
 
 export const AnalysisScreen = ({
   items,

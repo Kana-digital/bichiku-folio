@@ -44,9 +44,10 @@ export function calcScore(
   const avgDev = devs.reduce((a, b) => a + b, 0) / SECTORS.length;
   const bal = Math.max(0, 40 * (1 - avgDev * 4));
 
-  const datedItems = items.filter((i) => i.expiry !== '9999-12-31');
+  const datedItems = items.filter((i) => i.expiry !== '9999-12-31' && !isNaN(new Date(i.expiry).getTime()));
+  const now = new Date();
   const expiring = datedItems.filter((i) => {
-    const d = Math.ceil((new Date(i.expiry).getTime() - new Date('2026-04-02').getTime()) / 86400000);
+    const d = Math.ceil((new Date(i.expiry).getTime() - now.getTime()) / 86400000);
     return d > 0 && d <= 30;
   }).length;
   const expR = datedItems.length > 0 ? expiring / datedItems.length : 0;

@@ -1,9 +1,9 @@
 import { COLORS } from '../constants/colors';
 
-const REFERENCE_DATE = '2026-04-02';
-
 export function daysUntil(d: string): number {
-  return Math.ceil((new Date(d).getTime() - new Date(REFERENCE_DATE).getTime()) / 86400000);
+  const target = new Date(d).getTime();
+  if (isNaN(target)) return 0;
+  return Math.ceil((target - Date.now()) / 86400000);
 }
 
 export function statusColor(d: number): string {

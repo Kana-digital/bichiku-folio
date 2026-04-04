@@ -94,7 +94,7 @@ export const HomeScreen = ({
       // 品目数ベース / 水量ベース / カロリーベースを分岐
       const isDrink = s.id === 'drink';
       const isItemBased = !!s.targetItemsPerPerson;
-      const targetItems = isItemBased ? s.targetItemsPerPerson! * sc.familySize : 0;
+      const targetItems = isItemBased ? (s.targetItemsPerPerson ?? 0) * sc.familySize : 0;
       const sectorTarget = isItemBased ? targetItems : isDrink ? sc.reqWater : sc.reqKcal * s.targetRatio;
       const sectorCurrent = isItemBased ? totalQty : isDrink ? w : k;
       const achievePct = sectorTarget > 0 ? (sectorCurrent / sectorTarget) * 100 : 0;

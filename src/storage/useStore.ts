@@ -26,10 +26,16 @@ export function useStore() {
       ]);
 
       if (itemsData) {
-        setItems(JSON.parse(itemsData));
+        const parsed = JSON.parse(itemsData);
+        if (Array.isArray(parsed)) {
+          setItems(parsed.filter((i: any) => i && typeof i.id === 'number' && typeof i.name === 'string'));
+        }
       }
       if (membersData) {
-        setMembers(JSON.parse(membersData));
+        const parsed = JSON.parse(membersData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMembers(parsed);
+        }
       }
       if (regionData) {
         setRegionId(regionData);
