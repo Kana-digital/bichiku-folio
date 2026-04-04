@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "sourceMap": false,
+    "declaration": false,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react",
+    "target": "ES2020",
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "outDir": "dist-test",
+    "rootDir": "."
+  },
+  "include": [
+    "src/utils/**/*.ts",
+    "src/types.ts",
+    "src/constants/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
