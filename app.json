@@ -7,10 +7,37 @@
       "**/*"
     ],
     "ios": {
-      "supportsTabletMode": true
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.bichikufolio.app",
+      "infoPlist": {
+        "GADApplicationIdentifier": "ca-app-pub-1593750663073581~7006772992",
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "2fnua5tdw4.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "2fnua5tdw4.skadnetwork"
+          }
+        ],
+        "NSUserTrackingUsageDescription": "広告のパーソナライズのために使用します。許可しない場合でもアプリはご利用いただけます。",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "versionCode": 1,
+      "package": "com.bichikufolio.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -21,7 +48,19 @@
     },
     "scheme": "bichiku-folio",
     "plugins": [
-      "expo-asset"
-    ]
+      "expo-asset",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-1593750663073581~7006772992",
+          "iosAppId": "ca-app-pub-1593750663073581~7006772992"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b4206a26-4313-47ad-908a-c3e1a6cc2471"
+      }
+    }
   }
 }

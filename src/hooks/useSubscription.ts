@@ -1,0 +1,135 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PlanId, SubscriptionState, AdState, PlanDefinition } from '../types';
+import { PLANS, AD_CONFIG } from '../constants/plans';
+
+const SUB_KEY = 'bichiku_subscription';
+const AD_KEY = 'bichiku_ad_state';
+
+const DEFAULT_SUB: SubscriptionState = {
+  planId: 'free',
+  entitlementId: null,
+  expiresAt: null,
+};
+
+const DEFAULT_AD: AdState = {
+  actionCount: 0,
+};
+
+/**
+ * サブスクリプション + 広告制御hook
+ *
+ * 広告モデル:
+ * - 全機能無料で使える
+ * - 商品の追加・削除・編集ごとに画像広告を表示
+ * - 10回ごとに動画広告を表示
+ * - プレミアム会員（¥110/月 or ¥980/年）は広告なし
+ */
+export function useSubscription() {
+  const [sub, setSub] = useState<SubscriptionState>(DEFAULT_SUB);
+  const [adState, setAdState] = useState<AdState>(DEFAULT_AD);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // ── 読み込み ──
+  useEffect(() => {
+    (async () => {
+      try {
+        const [rawSub, rawAd] = await Promise.all([
+          AsyncStorage.getItem(SUB_KEY),
+          AsyncStorage.getItem(AD_KEY),
+        ]);
+        if (rawSub) {
+          const parsed: SubscriptionState = JSON.parse(rawSub);
+          // 有効期限切れチェック
+          if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
+            const expired = { ...DEFAULT_SUB };
+            await AsyncStorage.setItem(SUB_KEY, JSON.stringify(expired));
+            setSub(expired);
+          } else {
+            setSub(parsed);
+          }
+        }
+        if (rawAd) {
+          setAdState(JSON.parse(rawAd));
+        }
+      } catch (e) {
+        console.error('Failed to load subscription:', e);
+      }
+      setIsLoaded(true);
+    })();
+  }, []);
+
+  // ── 現在のプラン定義 ──
+  const plan: PlanDefinition = useMemo(() => PLANS[sub.planId] ?? PLANS.free, [sub.planId]);
+
+  // ── プレミアムか（広告なし） ──
+  const isPremium = sub.planId === 'premium';
+
+  // ── 広告を表示すべきか判定 + カウント更新 ──
+  // アクション（追加・削除・編集）後に呼ぶ。
+  // 返り値: 'image' | 'video' | null
+  const recordAction = useCallback(async (): Promise<'image' | 'video' | null> => {
+    if (isPremium) return null;
+
+    const newCount = adState.actionCount + 1;
+    const newAdState: AdState = { actionCount: newCount };
+    setAdState(newAdState);
+    await AsyncStorage.setItem(AD_KEY, JSON.stringify(newAdState));
+
+    if (newCount % AD_CONFIG.videoInterval === 0) {
+      return 'video';
+    }
+    return 'image';
+  }, [isPremium, adState.actionCount]);
+
+  // ── 購入処理 (RevenueCat導入時に差し替え) ──
+  const purchase = useCallback(
+    async (period: 'monthly' | 'yearly') => {
+      // TODO: RevenueCat購入フロー
+      const expiresAt = new Date();
+      if (period === 'monthly') {
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+      } else {
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      }
+
+      const newSub: SubscriptionState = {
+        planId: 'premium',
+        entitlementId: `local_${period}`,
+        expiresAt: expiresAt.toISOString(),
+      };
+      setSub(newSub);
+      await AsyncStorage.setItem(SUB_KEY, JSON.stringify(newSub));
+      return true;
+    },
+    [],
+  );
+
+  // ── 復元処理 (RevenueCat導入時に差し替え) ──
+  const restore = useCallback(async () => {
+    // TODO: RevenueCat復元フロー
+    return false;
+  }, []);
+
+  // ── デバッグ用: リセット ──
+  const resetSubscription = useCallback(async () => {
+    setSub(DEFAULT_SUB);
+    setAdState(DEFAULT_AD);
+    await Promise.all([
+      AsyncStorage.setItem(SUB_KEY, JSON.stringify(DEFAULT_SUB)),
+      AsyncStorage.setItem(AD_KEY, JSON.stringify(DEFAULT_AD)),
+    ]);
+  }, []);
+
+  return {
+    sub,
+    plan,
+    isPremium,
+    isLoaded,
+    adState,
+    recordAction,
+    purchase,
+    restore,
+    resetSubscription,
+  };
+}

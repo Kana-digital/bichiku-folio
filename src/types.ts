@@ -51,6 +51,30 @@ export interface Preset {
   waterL: number;
 }
 
+// ── マネタイズ関連（広告モデル） ──
+
+export type PlanId = 'free' | 'premium';
+
+export interface PlanDefinition {
+  id: PlanId;
+  name: string;
+  /** 広告非表示か */
+  adFree: boolean;
+}
+
+export interface SubscriptionState {
+  planId: PlanId;
+  /** RevenueCat entitlement ID (null = ローカルのみ) */
+  entitlementId: string | null;
+  /** 有効期限 ISO string (null = free or lifetime) */
+  expiresAt: string | null;
+}
+
+export interface AdState {
+  /** 累計アクション数（広告トリガー用） */
+  actionCount: number;
+}
+
 export interface ScoreResult {
   total: number;
   suf: number;
