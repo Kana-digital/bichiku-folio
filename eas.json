@@ -17,7 +17,13 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
@@ -25,6 +31,10 @@
       "ios": {
         "appleId": "9kana6@gmail.com",
         "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "production"
       }
     }
   }
