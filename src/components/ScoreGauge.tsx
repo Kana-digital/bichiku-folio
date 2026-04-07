@@ -20,7 +20,7 @@ export const ScoreGauge = ({
   sub,
   onClick,
 }: ScoreGaugeProps) => {
-  const pct = ((score / max) * 100);
+  const pct = max > 0 ? ((score / max) * 100) : 0;
   const Component = onClick ? TouchableOpacity : View;
 
   return (

@@ -72,7 +72,7 @@ export const HomeScreen = ({
     const data = SECTORS.map((s) => {
       const v = items
         .filter((i) => i.sec === s.id)
-        .reduce((a, i) => a + i.qty * i.kcal, 0);
+        .reduce((a, i) => a + (i.qty ?? 0) * (i.kcal ?? 0), 0);
       return {
         ...s,
         value: v,
@@ -85,8 +85,8 @@ export const HomeScreen = ({
   const sectorData = useMemo(() => {
     return SECTORS.map((s) => {
       const si = items.filter((i) => i.sec === s.id);
-      const k = si.reduce((a, i) => a + i.qty * i.kcal, 0);
-      const w = si.reduce((a, i) => a + i.qty * i.waterL, 0);
+      const k = si.reduce((a, i) => a + (i.qty ?? 0) * (i.kcal ?? 0), 0);
+      const w = si.reduce((a, i) => a + (i.qty ?? 0) * (i.waterL ?? 0), 0);
       // 配分比（表示用）
       const p = sc.totalKcal > 0 ? (k / sc.totalKcal) * 100 : 0;
       const totalQty = si.reduce((a, i) => a + i.qty, 0);
@@ -113,10 +113,10 @@ export const HomeScreen = ({
           ? { text: '不足', col: COLORS.red }
           : { text: '未登録', col: COLORS.textSub };
       const nearExpiry = si.filter((i) => {
-        const d = daysUntil(i.expiry);
+        const d = daysUntil(i.expiry ?? '9999-12-31');
         return d > 0 && d <= 30;
       }).length;
-      const expired = si.filter((i) => daysUntil(i.expiry) <= 0).length;
+      const expired = si.filter((i) => daysUntil(i.expiry ?? '9999-12-31') <= 0).length;
       return {
         ...s,
         items: si,
@@ -211,8 +211,19 @@ export const HomeScreen = ({
                 );
 
                 const labelR = 85;
-                const labelX = 100 + labelR * Math.cos(midRad);
-                const labelY = 100 + labelR * Math.sin(midRad);
+                let labelX = 100 + labelR * Math.cos(midRad);
+                let labelY = 100 + labelR * Math.sin(midRad);
+
+                // ラベルがSVG外にはみ出ないようクランプ
+                labelX = Math.max(10, Math.min(190, labelX));
+                labelY = Math.max(15, Math.min(230, labelY));
+
+                // 1セクターのみの場合は右側に固定配置
+                const isSingle = pieData.length === 1;
+                if (isSingle) {
+                  labelX = 155;
+                  labelY = 55;
+                }
 
                 acc.push({
                   ...d,
@@ -220,7 +231,7 @@ export const HomeScreen = ({
                   labelX,
                   labelY,
                   endAngle,
-                  textAnchor: labelX > 100 ? 'start' : 'end',
+                  textAnchor: isSingle ? 'middle' : labelX > 100 ? 'start' : 'end',
                 });
                 return acc;
               }, [] as any[]).map((d, idx) => (
@@ -351,8 +362,9 @@ export const HomeScreen = ({
                 {s.items.length > 0 && (
                   <View style={styles.itemsList}>
                     {s.items.map((item) => {
-                      const isNoExpiry = item.expiry === '9999-12-31';
-                      const d = daysUntil(item.expiry);
+                      const itemExpiry = item.expiry ?? '9999-12-31';
+                      const isNoExpiry = itemExpiry === '9999-12-31';
+                      const d = daysUntil(itemExpiry);
                       const col = isNoExpiry ? COLORS.textSub : d <= 0 ? COLORS.red : d <= 30 ? COLORS.yellow : COLORS.textSub;
                       return (
                         <View key={item.id} style={styles.itemRow}>
@@ -361,7 +373,7 @@ export const HomeScreen = ({
                           </Text>
                           <Text style={styles.itemQty}>x{item.qty}</Text>
                           <Text style={[styles.itemExpiry, { color: col }]}>
-                            {isNoExpiry ? '期限なし' : d <= 0 ? '期限切れ' : d <= 30 ? `あと${d}日` : item.expiry.replace(/-/g, '/')}
+                            {isNoExpiry ? '期限なし' : d <= 0 ? '期限切れ' : d <= 30 ? `あと${d}日` : itemExpiry.replace(/-/g, '/')}
                           </Text>
                         </View>
                       );
@@ -497,6 +509,20 @@ const styles = StyleSheet.create({
   emptyChartText: {
     fontSize: 12,
     color: COLORS.textSub,
+  },
+  limitBanner: {
+    backgroundColor: COLORS.yellow + '18',
+    borderColor: COLORS.yellow + '44',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  limitText: {
+    fontSize: 11,
+    color: COLORS.yellow,
+    fontWeight: '600',
   },
   sectorItem: {
     marginBottom: 6,

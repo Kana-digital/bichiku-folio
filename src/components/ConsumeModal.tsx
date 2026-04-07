@@ -39,7 +39,7 @@ export const ConsumeModal = ({
     () =>
       items
         .filter((i) => i.qty > 0)
-        .sort((a, b) => daysUntil(a.expiry) - daysUntil(b.expiry)),
+        .sort((a, b) => daysUntil(a.expiry ?? '9999-12-31') - daysUntil(b.expiry ?? '9999-12-31')),
     [items]
   );
 
@@ -74,7 +74,9 @@ export const ConsumeModal = ({
 
   const renderItem: ListRenderItem<StockItem> = ({ item }) => {
     const sec = SECTORS.find((s) => s.id === item.sec);
-    const d = daysUntil(item.expiry);
+    const expiry = item.expiry ?? '9999-12-31';
+    const isNoExpiry = expiry === '9999-12-31';
+    const d = daysUntil(expiry);
     const isSelected = selectedItemId === item.id;
 
     return (
@@ -96,8 +98,14 @@ export const ConsumeModal = ({
           </View>
         </View>
         <View style={styles.itemExpiry}>
-          <Text style={styles.expiryDate}>{item.expiry.replace(/-/g, '/')}</Text>
-          <Text style={styles.daysLeft}>{d > 0 ? `あと${d}日` : '期限切れ'}</Text>
+          {isNoExpiry ? (
+            <Text style={styles.expiryDate}>期限なし</Text>
+          ) : (
+            <>
+              <Text style={styles.expiryDate}>{expiry.replace(/-/g, '/')}</Text>
+              <Text style={styles.daysLeft}>{d > 0 ? `あと${d}日` : '期限切れ'}</Text>
+            </>
+          )}
         </View>
       </TouchableOpacity>
     );

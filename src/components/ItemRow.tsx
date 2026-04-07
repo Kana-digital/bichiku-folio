@@ -18,8 +18,9 @@ interface ItemRowProps {
 
 export const ItemRow = ({ item, onConsume, onEdit }: ItemRowProps) => {
   const sec = SECTORS.find((s) => s.id === item.sec);
-  const isNoExpiry = item.expiry === '9999-12-31';
-  const d = daysUntil(item.expiry);
+  const expiry = item.expiry ?? '9999-12-31';
+  const isNoExpiry = expiry === '9999-12-31';
+  const d = daysUntil(expiry);
   const col = isNoExpiry ? COLORS.textSub : statusColor(d);
 
   return (
@@ -36,7 +37,7 @@ export const ItemRow = ({ item, onConsume, onEdit }: ItemRowProps) => {
       <View style={styles.expirySection}>
         <Text style={styles.expiryLabel}>{isNoExpiry ? '' : '賞味期限'}</Text>
         <Text style={[styles.expiryDate, { color: col }]}>
-          {isNoExpiry ? '期限なし' : item.expiry.replace(/-/g, '/')}
+          {isNoExpiry ? '期限なし' : expiry.replace(/-/g, '/')}
         </Text>
         {!isNoExpiry && (
           <Text style={[styles.daysLeft, { color: col }]}>

@@ -9,13 +9,14 @@ interface BarProps {
 }
 
 export const Bar = ({ pct, color, h = 8 }: BarProps) => {
+  const safePct = isNaN(pct) || pct < 0 ? 0 : Math.min(100, pct);
   return (
     <View style={[styles.container, { height: h, borderRadius: h / 2 }]}>
       <View
         style={[
           styles.fill,
           {
-            width: `${Math.min(100, pct)}%`,
+            width: `${safePct}%`,
             backgroundColor: color,
             borderRadius: h / 2,
           },

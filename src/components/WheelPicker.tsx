@@ -26,7 +26,7 @@ export const WheelPicker = ({
   width = 80,
 }: WheelPickerProps) => {
   const scrollRef = useRef<ScrollView>(null);
-  const initialIdx = items.findIndex((i) => i.value === selectedValue);
+  const initialIdx = Math.max(0, items.findIndex((i) => i.value === selectedValue));
 
   useEffect(() => {
     const idx = items.findIndex((i) => i.value === selectedValue);

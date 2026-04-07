@@ -28,7 +28,19 @@ export function useStore() {
       if (itemsData) {
         const parsed = JSON.parse(itemsData);
         if (Array.isArray(parsed)) {
-          setItems(parsed.filter((i: any) => i && typeof i.id === 'number' && typeof i.name === 'string'));
+          setItems(
+            parsed
+              .filter((i: any) => i && typeof i.id === 'number' && typeof i.name === 'string')
+              .map((i: any) => ({
+                ...i,
+                sec: typeof i.sec === 'string' ? i.sec : 'staple',
+                qty: typeof i.qty === 'number' && !isNaN(i.qty) ? i.qty : 0,
+                kcal: typeof i.kcal === 'number' && !isNaN(i.kcal) ? i.kcal : 0,
+                waterL: typeof i.waterL === 'number' && !isNaN(i.waterL) ? i.waterL : 0,
+                expiry: typeof i.expiry === 'string' ? i.expiry : '9999-12-31',
+                loc: typeof i.loc === 'string' ? i.loc : 'パントリー',
+              }))
+          );
         }
       }
       if (membersData) {

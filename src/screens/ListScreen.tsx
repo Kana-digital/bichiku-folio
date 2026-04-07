@@ -60,15 +60,16 @@ export const ListScreen = ({ items, onConsume, onEdit }: ListScreenProps) => {
 
     const noExpiry: StockItem[] = [];
     filtered.forEach((item) => {
-      if (item.expiry === '9999-12-31') { noExpiry.push(item); return; }
-      const d = daysUntil(item.expiry);
+      const expiry = item.expiry ?? '9999-12-31';
+      if (expiry === '9999-12-31') { noExpiry.push(item); return; }
+      const d = daysUntil(expiry);
       if (d <= 0) expired.push(item);
       else if (d <= 30) nearExpiry.push(item);
       else safe.push(item);
     });
 
     const sortByExpiry = (a: StockItem, b: StockItem) =>
-      daysUntil(a.expiry) - daysUntil(b.expiry);
+      daysUntil(a.expiry ?? '9999-12-31') - daysUntil(b.expiry ?? '9999-12-31');
     expired.sort(sortByExpiry);
     nearExpiry.sort(sortByExpiry);
     safe.sort(sortByExpiry);

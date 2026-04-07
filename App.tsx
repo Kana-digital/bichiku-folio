@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -10,6 +10,7 @@ import { REGION_PROFILES } from './src/constants/regions';
 import { useStore } from './src/storage/useStore';
 import { useItemActions } from './src/hooks/useItemActions';
 import { useTabSwipe } from './src/hooks/useTabSwipe';
+import { useSubscription } from './src/hooks/useSubscription';
 
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ListScreen } from './src/screens/ListScreen';
@@ -20,9 +21,12 @@ import { AddModal } from './src/components/AddModal';
 import { EditModal } from './src/components/EditModal';
 import { ConsumeModal } from './src/components/ConsumeModal';
 import { MessageInbox } from './src/components/MessageInbox';
+import { PaywallModal } from './src/components/PaywallModal';
+import { AdModal } from './src/components/AdModal';
 import { SwipeWrapper } from './src/components/SwipeWrapper';
 import { HeaderRight } from './src/components/HeaderRight';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { initAdMob } from './src/services/admob';
 
 const Tab = createBottomTabNavigator();
 
@@ -57,10 +61,97 @@ export default function App() {
     handleAddSubmit, handleConsume, handleEditSave, handleEditDelete,
   } = useItemActions(items, saveItems);
   const { navigationRef, navigateToTab } = useTabSwipe();
+  const { isPremium, purchase, restore, recordAction } = useSubscription();
+
+  // AdMob SDK 初期化（1回のみ）
+  useEffect(() => {
+    if (!isPremium) {
+      initAdMob();
+    }
+  }, []);
+
   const [inboxVisible, setInboxVisible] = useState(false);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+
+  // 広告モーダル制御
+  const [adVisible, setAdVisible] = useState(false);
+  const [adType, setAdType] = useState<'image' | 'video'>('image');
+  // 広告が閉じた後に実行するコールバック
+  const [adCallback, setAdCallback] = useState<(() => void) | null>(null);
 
   const openInbox = useCallback(() => setInboxVisible(true), []);
   const closeInbox = useCallback(() => setInboxVisible(false), []);
+  const openPaywall = useCallback(() => setPaywallVisible(true), []);
+  const closePaywall = useCallback(() => setPaywallVisible(false), []);
+
+  // ── 広告付きアクション実行 ──
+  // アクション(追加/削除/編集)後に広告を表示し、広告が閉じたらUIを更新
+  const showAdAfterAction = useCallback(async (afterCallback?: () => void) => {
+    const type = await recordAction();
+    if (!type) {
+      // プレミアム → 広告なし
+      afterCallback?.();
+      return;
+    }
+    setAdType(type);
+    setAdCallback(() => () => afterCallback?.());
+    setAdVisible(true);
+  }, [recordAction]);
+
+  const handleAdClose = useCallback(() => {
+    setAdVisible(false);
+    adCallback?.();
+    setAdCallback(null);
+  }, [adCallback]);
+
+  // ── ラップされたハンドラー ──
+  const handleAddPress = useCallback(() => {
+    setAddModalVisible(true);
+  }, [setAddModalVisible]);
+
+  // 追加完了後に広告表示
+  const handleAddSubmitWithAd = useCallback(
+    async (
+      name: string,
+      sec: string,
+      qty: number,
+      kcal: number,
+      waterL: number,
+      expiry: string,
+      loc: string,
+    ) => {
+      handleAddSubmit(name, sec, qty, kcal, waterL, expiry, loc);
+      await showAdAfterAction();
+    },
+    [handleAddSubmit, showAdAfterAction],
+  );
+
+  // 編集保存後に広告表示
+  const handleEditSaveWithAd = useCallback(
+    async (item: any) => {
+      handleEditSave(item);
+      await showAdAfterAction();
+    },
+    [handleEditSave, showAdAfterAction],
+  );
+
+  // 削除後に広告表示
+  const handleEditDeleteWithAd = useCallback(
+    async (id: number) => {
+      handleEditDelete(id);
+      await showAdAfterAction();
+    },
+    [handleEditDelete, showAdAfterAction],
+  );
+
+  // 消費後に広告表示
+  const handleConsumeWithAd = useCallback(
+    async (id: number, qty: number) => {
+      handleConsume(id, qty);
+      await showAdAfterAction();
+    },
+    [handleConsume, showAdAfterAction],
+  );
 
   if (!isLoaded) {
     return (
@@ -103,7 +194,7 @@ export default function App() {
                     items={items}
                     members={members}
                     regionDays={regionDays}
-                    onAddPress={() => setAddModalVisible(true)}
+                    onAddPress={handleAddPress}
                     onConsumePress={() => setConsumeModalVisible(true)}
                   />
                 </SwipeWrapper>
@@ -143,7 +234,11 @@ export default function App() {
                   onSwipeLeft={() => navigateToTab('left')}
                   onSwipeRight={() => navigateToTab('right')}
                 >
-                  <AnalysisScreen items={items} members={members} regionDays={regionDays} />
+                  <AnalysisScreen
+                    items={items}
+                    members={members}
+                    regionDays={regionDays}
+                  />
                 </SwipeWrapper>
               )}
             </Tab.Screen>
@@ -164,6 +259,8 @@ export default function App() {
                     regionId={regionId}
                     onMembersChange={saveMembers}
                     onRegionChange={saveRegion}
+                    isPremium={isPremium}
+                    onUpgrade={openPaywall}
                   />
                 </SwipeWrapper>
               )}
@@ -174,22 +271,34 @@ export default function App() {
         <AddModal
           visible={addModalVisible}
           onClose={() => setAddModalVisible(false)}
-          onSubmit={handleAddSubmit}
+          onSubmit={handleAddSubmitWithAd}
         />
         <EditModal
           visible={!!editItem}
           item={editItem}
           onClose={() => setEditItem(null)}
-          onSave={handleEditSave}
-          onDelete={handleEditDelete}
+          onSave={handleEditSaveWithAd}
+          onDelete={handleEditDeleteWithAd}
         />
         <ConsumeModal
           visible={consumeModalVisible}
           items={items}
           onClose={() => setConsumeModalVisible(false)}
-          onSubmit={handleConsume}
+          onSubmit={handleConsumeWithAd}
         />
         <MessageInbox visible={inboxVisible} onClose={closeInbox} />
+        <PaywallModal
+          visible={paywallVisible}
+          onClose={closePaywall}
+          onPurchase={purchase}
+          onRestore={restore}
+        />
+        <AdModal
+          visible={adVisible}
+          adType={adType}
+          onClose={handleAdClose}
+          onRemoveAds={() => { setAdVisible(false); openPaywall(); }}
+        />
       </SafeAreaProvider>
     </ErrorBoundary>
   );

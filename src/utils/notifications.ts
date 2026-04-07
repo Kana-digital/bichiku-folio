@@ -74,9 +74,10 @@ export function checkExpiryAlerts(
 
   for (const item of items) {
     // 期限なし（9999-12-31）はスキップ
-    if (item.expiry === '9999-12-31') continue;
+    const expiry = item.expiry ?? '9999-12-31';
+    if (expiry === '9999-12-31') continue;
 
-    const daysLeft = daysUntil(item.expiry);
+    const daysLeft = daysUntil(expiry);
     const level = getAlertLevel(daysLeft);
 
     if (level && levelPriority[level] <= maxPriority) {

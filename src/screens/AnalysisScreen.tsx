@@ -10,6 +10,7 @@ import { COLORS } from '../constants/colors';
 import { Bar } from '../components/Bar';
 import { ScoreGauge } from '../components/ScoreGauge';
 import { calcScore } from '../utils/scoring';
+import { daysUntil } from '../utils/date';
 import { JP_AVG } from '../constants/jpAvg';
 import { SECTORS } from '../constants/sectors';
 import { GOV } from '../constants/ageKcal';
@@ -20,12 +21,6 @@ interface AnalysisScreenProps {
   members: Member[];
   regionDays: number;
 }
-
-const daysUntil = (d: string) => {
-  const t = new Date(d).getTime();
-  if (isNaN(t)) return 0;
-  return Math.ceil((t - Date.now()) / 86400000);
-};
 
 export const AnalysisScreen = ({
   items,
@@ -107,7 +102,7 @@ export const AnalysisScreen = ({
   // ── バランスの詳細パネル ──
   const BalDetail = () => {
     const secData = SECTORS.map((s) => {
-      const k = items.filter((i) => i.sec === s.id).reduce((a, i) => a + i.qty * i.kcal, 0);
+      const k = items.filter((i) => i.sec === s.id).reduce((a, i) => a + (i.qty ?? 0) * (i.kcal ?? 0), 0);
       const ratio = sc.totalKcal > 0 ? k / sc.totalKcal : 0;
       return { ...s, ratio, diff: ratio - s.targetRatio };
     });
@@ -192,13 +187,13 @@ export const AnalysisScreen = ({
   // ── 安定度の詳細パネル ──
   const RiskDetail = () => {
     const expiring = items.filter((i) => {
-      const d = daysUntil(i.expiry);
+      const d = daysUntil(i.expiry ?? '9999-12-31');
       return d > 0 && d <= 30;
     });
     const expPct = items.length > 0 ? Math.round((expiring.length / items.length) * 100) : 0;
     const maxSec = SECTORS.reduce<{ icon: string; name: string; r: number; id: string; targetRatio: number; color: string }>(
       (best, s) => {
-        const k = items.filter((i) => i.sec === s.id).reduce((a, i) => a + i.qty * i.kcal, 0);
+        const k = items.filter((i) => i.sec === s.id).reduce((a, i) => a + (i.qty ?? 0) * (i.kcal ?? 0), 0);
         const r = sc.totalKcal > 0 ? k / sc.totalKcal : 0;
         return r > best.r ? { icon: s.icon, name: s.name, r, id: s.id, targetRatio: s.targetRatio, color: s.color } : best;
       },
@@ -289,7 +284,7 @@ export const AnalysisScreen = ({
               <Text style={styles.adviceSubText}>
                 {expiring
                   .slice(0, 3)
-                  .map((i) => `${i.name}（あと${daysUntil(i.expiry)}日）`)
+                  .map((i) => `${i.name}（あと${daysUntil(i.expiry ?? '9999-12-31')}日）`)
                   .join('、')}
               </Text>
             </>
@@ -311,9 +306,10 @@ export const AnalysisScreen = ({
 
   // ── 政府推奨基準との比較 ──
   const GovComparison = () => {
+    const denom = sc.familySize * regionDays;
     const perPersonDay = {
-      kcal: sc.totalKcal / (sc.familySize * regionDays),
-      water: sc.totalWaterL / (sc.familySize * regionDays),
+      kcal: denom > 0 ? sc.totalKcal / denom : 0,
+      water: denom > 0 ? sc.totalWaterL / denom : 0,
     };
     const toiletQty = items
       .filter((i) => i.name.includes('トイレ'))

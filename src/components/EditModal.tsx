@@ -55,19 +55,20 @@ export const EditModal = ({ visible, item, onClose, onSave, onDelete }: EditModa
   // アイテムが変わったらフォームに反映
   useEffect(() => {
     if (item) {
-      setName(item.name);
-      setSec(item.sec);
-      setQty(item.qty.toString());
-      setKcal(item.kcal.toString());
-      setWaterL(item.waterL.toString());
-      const isNoExp = item.expiry === '9999-12-31';
+      setName(item.name ?? '');
+      setSec(item.sec ?? 'staple');
+      setQty((item.qty ?? 0).toString());
+      setKcal((item.kcal ?? 0).toString());
+      setWaterL((item.waterL ?? 0).toString());
+      const expiry = item.expiry ?? '9999-12-31';
+      const isNoExp = expiry === '9999-12-31';
       setNoExpiry(isNoExp);
       if (isNoExp) {
         setExpiry('');
       } else {
-        setExpiry(item.expiry.replace(/-/g, ''));
+        setExpiry(expiry.replace(/-/g, ''));
       }
-      setLoc(item.loc);
+      setLoc(item.loc ?? 'パントリー');
       setShowDatePicker(false);
       setShowCategoryPicker(false);
     }

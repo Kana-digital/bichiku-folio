@@ -18,6 +18,8 @@ interface SettingsScreenProps {
   regionId: string;
   onMembersChange: (members: Member[]) => void;
   onRegionChange: (regionId: string) => void;
+  isPremium?: boolean;
+  onUpgrade?: () => void;
 }
 
 export const SettingsScreen = ({
@@ -25,6 +27,8 @@ export const SettingsScreen = ({
   regionId,
   onMembersChange,
   onRegionChange,
+  isPremium = false,
+  onUpgrade = () => {},
 }: SettingsScreenProps) => {
   const currentRegion = REGION_PROFILES.find((r) => r.id === regionId);
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
@@ -186,6 +190,28 @@ export const SettingsScreen = ({
         <Text style={styles.sourceText}>
           出典：内閣府防災、気象庁データに基づく推奨値
         </Text>
+      </View>
+
+      {/* プラン情報 */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>📋 プラン</Text>
+        <View style={styles.planInfo}>
+          <View style={styles.planBadge}>
+            <Text style={[styles.planBadgeText, isPremium && styles.planBadgePremium]}>
+              {isPremium ? '✦ PREMIUM' : 'FREE'}
+            </Text>
+          </View>
+          <Text style={styles.planDesc}>
+            {isPremium
+              ? '広告なし — すべての機能が快適に使えます'
+              : '全機能無料 / 操作時に広告が表示されます'}
+          </Text>
+        </View>
+        {!isPremium && (
+          <TouchableOpacity style={styles.upgradeBtn} onPress={onUpgrade}>
+            <Text style={styles.upgradeBtnText}>✦ 広告を非表示にする</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
     </ScrollView>
@@ -381,5 +407,49 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSub,
     fontWeight: '600',
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  planInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  planBadge: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  planBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSub,
+    letterSpacing: 1,
+  },
+  planBadgePremium: {
+    color: COLORS.accent,
+  },
+  planDesc: {
+    fontSize: 11,
+    color: COLORS.textSub,
+    flex: 1,
+  },
+  upgradeBtn: {
+    backgroundColor: COLORS.accent,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  upgradeBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000',
   },
 });
