@@ -9,6 +9,7 @@ import {
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 import { COLORS } from '../constants/colors';
 import { SECTORS } from '../constants/sectors';
+import { CHART_SECTORS } from '../constants/chartSectors';
 import { calcScore, getMemberKcal, getMemberWater } from '../utils/scoring';
 import { daysUntil } from '../utils/date';
 import { JP_AVG } from '../constants/jpAvg';
@@ -32,6 +33,10 @@ interface PieSegment {
   targetRatio: number;
 }
 
+/**
+ * ドーナツ型円グラフのスライスパスを生成
+ * startAngle / endAngle: 度数（0 = 12時方向、時計回り）
+ */
 const createPieSlice = (
   startAngle: number,
   endAngle: number,
@@ -40,19 +45,39 @@ const createPieSlice = (
   cx: number,
   cy: number
 ): string => {
-  const startRad = (startAngle * Math.PI) / 180;
-  const endRad = (endAngle * Math.PI) / 180;
+  const sweep = endAngle - startAngle;
 
-  const x1 = cx + outerRadius * Math.cos(startRad);
-  const y1 = cy + outerRadius * Math.sin(startRad);
-  const x2 = cx + outerRadius * Math.cos(endRad);
-  const y2 = cy + outerRadius * Math.sin(endRad);
-  const x3 = cx + innerRadius * Math.cos(endRad);
-  const y3 = cy + innerRadius * Math.sin(endRad);
-  const x4 = cx + innerRadius * Math.cos(startRad);
-  const y4 = cy + innerRadius * Math.sin(startRad);
+  // 360度（完全なリング）の場合、SVGアークは始点=終点で描画不可。
+  // 外周2半円 + 内周2半円で1つの閉じたドーナツを描く。
+  if (sweep >= 359.9) {
+    const oR = outerRadius;
+    const iR = innerRadius;
+    return [
+      `M ${cx + oR} ${cy}`,
+      `A ${oR} ${oR} 0 1 1 ${cx - oR} ${cy}`,
+      `A ${oR} ${oR} 0 1 1 ${cx + oR} ${cy}`,
+      `M ${cx + iR} ${cy}`,
+      `A ${iR} ${iR} 0 1 0 ${cx - iR} ${cy}`,
+      `A ${iR} ${iR} 0 1 0 ${cx + iR} ${cy}`,
+      'Z',
+    ].join(' ');
+  }
 
-  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+  // 通常のスライス（12時方向始点: -90度オフセット）
+  const toRad = (deg: number) => ((deg - 90) * Math.PI) / 180;
+  const sr = toRad(startAngle);
+  const er = toRad(endAngle);
+
+  const x1 = cx + outerRadius * Math.cos(sr);
+  const y1 = cy + outerRadius * Math.sin(sr);
+  const x2 = cx + outerRadius * Math.cos(er);
+  const y2 = cy + outerRadius * Math.sin(er);
+  const x3 = cx + innerRadius * Math.cos(er);
+  const y3 = cy + innerRadius * Math.sin(er);
+  const x4 = cx + innerRadius * Math.cos(sr);
+  const y4 = cy + innerRadius * Math.sin(sr);
+
+  const largeArc = sweep > 180 ? 1 : 0;
 
   return `M ${x1} ${y1} A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x4} ${y4} Z`;
 };
@@ -69,26 +94,47 @@ export const HomeScreen = ({
     sc.total >= 70 ? COLORS.green : sc.total >= 40 ? COLORS.yellow : COLORS.red;
 
   const pieData = useMemo(() => {
-    const data = SECTORS.map((s) => {
-      const v = items
-        .filter((i) => i.sec === s.id)
+    // CHART_SECTORS に属するアイテムだけを集計（旧セクターIDの漏れを防ぐ）
+    const chartSectorIds = new Set(CHART_SECTORS.map((cs) => cs.id));
+    // デバッグ: 不明なセクターIDを検出
+    const allKnown = new Set([...chartSectorIds, 'drink', 'bousai', 'seasoning']);
+    const unknowns = items.filter((i) => !allKnown.has(i.sec));
+    if (unknowns.length > 0) {
+      console.log('[PieChart] 不明セクターID:', unknowns.map((i) => ({ name: i.name, sec: i.sec, kcal: i.kcal, qty: i.qty })));
+    }
+    const chartItems = items.filter((i) => chartSectorIds.has(i.sec));
+
+    const data = CHART_SECTORS.map((cs) => {
+      const v = chartItems
+        .filter((i) => i.sec === cs.id)
         .reduce((a, i) => a + (i.qty ?? 0) * (i.kcal ?? 0), 0);
-      return {
-        ...s,
-        value: v,
-        pct: sc.totalKcal > 0 ? ((v / sc.totalKcal) * 100) : 0,
-      };
-    }).filter((d) => d.value > 0);
-    return data;
-  }, [items, sc]);
+      return { ...cs, value: v };
+    });
+
+    // 分母 = 各セクターの value 合計（表示される全スライスの合計 → 必ず100%）
+    const chartTotalKcal = data.reduce((s, d) => s + d.value, 0);
+
+    const segments = data
+      .map((d) => ({
+        ...d,
+        pct: chartTotalKcal > 0 ? (d.value / chartTotalKcal) * 100 : 0,
+      }))
+      .filter((d) => d.value > 0);
+
+    return { segments, totalKcal: chartTotalKcal };
+  }, [items]);
 
   const sectorData = useMemo(() => {
+    // pieData と同じ分母を使う（100%になることを保証）
+    const chartKcal = pieData.totalKcal;
+    // pieData のパーセンテージをマップ化
+    const piePctMap = new Map(pieData.segments.map((seg) => [seg.id, seg.pct]));
     return SECTORS.map((s) => {
       const si = items.filter((i) => i.sec === s.id);
       const k = si.reduce((a, i) => a + (i.qty ?? 0) * (i.kcal ?? 0), 0);
       const w = si.reduce((a, i) => a + (i.qty ?? 0) * (i.waterL ?? 0), 0);
-      // 配分比（表示用）
-      const p = sc.totalKcal > 0 ? (k / sc.totalKcal) * 100 : 0;
+      // 配分比（表示用）— pieDataと完全一致させる
+      const p = piePctMap.get(s.id) ?? (chartKcal > 0 ? (k / chartKcal) * 100 : 0);
       const totalQty = si.reduce((a, i) => a + i.qty, 0);
       // 目標に対する達成率（タグ判定用）
       // 品目数ベース / 水量ベース / カロリーベースを分岐
@@ -133,9 +179,11 @@ export const HomeScreen = ({
         totalQty,
       };
     });
-  }, [items, sc]);
+  }, [items, sc, pieData]);
 
   const [openSector, setOpenSector] = useState<string | null>(null);
+  const [selectedPie, setSelectedPie] = useState<string | null>(null);
+  const selectedPieData = selectedPie ? pieData.segments.find((s) => s.id === selectedPie) : null;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -189,95 +237,68 @@ export const HomeScreen = ({
       <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
           <Text style={styles.chartTitle}>内訳</Text>
-          <Text style={styles.chartSubtitle}>カロリーベース配分</Text>
+          <Text style={styles.chartSubtitle}>食品カロリーベース配分</Text>
         </View>
-        {pieData.length > 0 ? (
-          <View style={styles.chartContainer}>
-            <Svg width="100%" height={240} viewBox="0 0 200 240">
-              {pieData.reduce((acc, d, idx) => {
-                const prevAngle = acc.length === 0 ? 0 : acc[acc.length - 1].endAngle;
-                const angle = (d.value / sc.totalKcal) * 360;
-                const endAngle = prevAngle + angle;
-                const midAngle = (prevAngle + endAngle) / 2;
-                const midRad = (midAngle * Math.PI) / 180;
-
-                const path = createPieSlice(
-                  prevAngle,
-                  endAngle,
-                  45,
-                  75,
-                  100,
-                  100
-                );
-
-                const labelR = 85;
-                let labelX = 100 + labelR * Math.cos(midRad);
-                let labelY = 100 + labelR * Math.sin(midRad);
-
-                // ラベルがSVG外にはみ出ないようクランプ
-                labelX = Math.max(10, Math.min(190, labelX));
-                labelY = Math.max(15, Math.min(230, labelY));
-
-                // 1セクターのみの場合は右側に固定配置
-                const isSingle = pieData.length === 1;
-                if (isSingle) {
-                  labelX = 155;
-                  labelY = 55;
-                }
-
-                acc.push({
-                  ...d,
-                  path,
-                  labelX,
-                  labelY,
-                  endAngle,
-                  textAnchor: isSingle ? 'middle' : labelX > 100 ? 'start' : 'end',
-                });
-                return acc;
-              }, [] as any[]).map((d, idx) => (
-                <G key={idx}>
-                  <Path d={d.path} fill={d.color} />
-                  <SvgText
-                    x={d.labelX}
-                    y={d.labelY}
-                    textAnchor={d.textAnchor}
-                    fontSize="10"
-                    fill={COLORS.text}
-                  >
-                    {d.icon} {d.name} {d.pct.toFixed(1)}%
-                  </SvgText>
-                </G>
-              ))}
-              <SvgText
-                x="100"
-                y="95"
-                textAnchor="middle"
-                fontSize="18"
-                fontWeight="800"
-                fill={COLORS.text}
-              >
-                {sc.totalKcal.toLocaleString()}
-              </SvgText>
-              <SvgText
-                x="100"
-                y="110"
-                textAnchor="middle"
-                fontSize="9"
-                fill={COLORS.textSub}
-              >
-                kcal
-              </SvgText>
-              <SvgText
-                x="100"
-                y="122"
-                textAnchor="middle"
-                fontSize="7"
-                fill={COLORS.textSub}
-              >
-                目標{sc.reqKcal.toLocaleString()}kcal
-              </SvgText>
-            </Svg>
-          </View>
+        {pieData.segments.length > 0 ? (
+          <TouchableOpacity activeOpacity={1} onPress={() => setSelectedPie(null)}>
+            <View style={styles.chartContainer}>
+              <Svg width="100%" height={240} viewBox="0 0 200 200">
+                {pieData.segments.reduce((acc, d, idx) => {
+                  const prevAngle = acc.length === 0 ? 0 : acc[acc.length - 1].endAngle;
+                  const angle = (d.value / pieData.totalKcal) * 360;
+                  const isLast = idx === pieData.segments.length - 1;
+                  const endAngle = isLast ? 360 : prevAngle + angle;
+                  const isSelected = selectedPie === d.id;
+                  const path = createPieSlice(
+                    prevAngle, endAngle,
+                    isSelected ? 38 : 42,
+                    isSelected ? 78 : 72,
+                    100, 100
+                  );
+                  acc.push({ ...d, path, endAngle, isSelected });
+                  return acc;
+                }, [] as any[]).map((d: any, idx: number) => (
+                  <G key={idx} onPress={() => setSelectedPie(selectedPie === d.id ? null : d.id)}>
+                    <Path
+                      d={d.path}
+                      fill={d.color}
+                      opacity={selectedPie && !d.isSelected ? 0.4 : 1}
+                    />
+                  </G>
+                ))}
+                {selectedPieData ? (
+                  <>
+                    <SvgText x="100" y="92" textAnchor="middle" fontSize="13" fill={COLORS.text}>
+                      {selectedPieData.icon}
+                    </SvgText>
+                    <SvgText x="100" y="107" textAnchor="middle" fontSize="12" fontWeight="700" fill={selectedPieData.color}>
+                      {selectedPieData.name}
+                    </SvgText>
+                    <SvgText x="100" y="123" textAnchor="middle" fontSize="18" fontWeight="800" fill={selectedPieData.color}>
+                      {selectedPieData.pct.toFixed(1)}%
+                    </SvgText>
+                  </>
+                ) : (
+                  <>
+                    <SvgText x="100" y="92" textAnchor="middle" fontSize="16" fontWeight="800" fill={COLORS.text}>
+                      {pieData.totalKcal.toLocaleString()}
+                    </SvgText>
+                    <SvgText x="100" y="106" textAnchor="middle" fontSize="8" fill={COLORS.textSub}>
+                      kcal（食品のみ）
+                    </SvgText>
+                    <SvgText x="100" y="118" textAnchor="middle" fontSize="7" fill={COLORS.textSub}>
+                      目標 {sc.reqKcal.toLocaleString()} kcal
+                    </SvgText>
+                  </>
+                )}
+              </Svg>
+            </View>
+            {!selectedPie && (
+              <Text style={{ fontSize: 9, color: COLORS.textSub, textAlign: 'center', marginTop: -4, marginBottom: 4 }}>
+                タップすると内訳を表示できます
+              </Text>
+            )}
+          </TouchableOpacity>
         ) : (
           <View style={styles.emptyChart}>
             <Text style={styles.emptyChartText}>商品を追加するとグラフが表示されます</Text>
@@ -318,9 +339,15 @@ export const HomeScreen = ({
                 </View>
               </View>
               <View style={styles.sectorRight}>
-                <Text style={[styles.sectorPct, { color: s.color }]}>
-                  {s.pct.toFixed(1)}%
-                </Text>
+                {s.id !== 'drink' && s.id !== 'bousai' && s.id !== 'seasoning' ? (
+                  <Text style={[styles.sectorPct, { color: s.color }]}>
+                    {s.pct.toFixed(1)}%
+                  </Text>
+                ) : (s.id === 'drink' || s.id === 'bousai') ? (
+                  <Text style={styles.analysisHint}>分析タブにて{'\n'}目標が確認できます</Text>
+                ) : s.id === 'seasoning' ? (
+                  <Text style={styles.analysisHint}>円グラフには{'\n'}表示されません</Text>
+                ) : null}
                 <Text
                   style={[
                     styles.sectorTag,
@@ -502,7 +529,7 @@ const styles = StyleSheet.create({
     height: 240,
   },
   emptyChart: {
-    height: 240,
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -586,6 +613,13 @@ const styles = StyleSheet.create({
   sectorChevron: {
     fontSize: 10,
     color: COLORS.textSub,
+  },
+  analysisHint: {
+    fontSize: 8,
+    color: COLORS.textSub,
+    textAlign: 'right',
+    lineHeight: 11,
+    opacity: 0.7,
   },
   sectorExpanded: {
     backgroundColor: COLORS.card,

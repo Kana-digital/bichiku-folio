@@ -13,4 +13,8 @@ export const COLORS = {
   orange: '#FF8A65',
 };
 
-export const SEC_COLORS = ['#58A6FF', '#FF6B6B', '#00D09C', '#FFB300', '#BC8CFF', '#FF8A65'];
+// 順: 主食, 魚介缶詰, 肉缶詰, レトルト食品, 野菜・果物缶, 副菜・補助食, 調味料, 飲料・水, 防災グッズ
+export const SEC_COLORS = [
+  '#58A6FF', '#FF6B6B', '#FF9E80', '#CE93D8', '#A5D6A7',
+  '#FFB300', '#BC8CFF', '#00D09C', '#FF8A65',
+];

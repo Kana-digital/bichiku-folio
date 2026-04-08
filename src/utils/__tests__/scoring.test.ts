@@ -150,7 +150,7 @@ describe('calcScore', () => {
   it('スコア合計は100以下', () => {
     const items = [
       makeItem({ qty: 200, kcal: 500, waterL: 1, sec: 'staple' }),
-      makeItem({ id: 2, name: '副菜', qty: 100, kcal: 300, waterL: 0, sec: 'side' }),
+      makeItem({ id: 2, name: '副菜', qty: 100, kcal: 300, waterL: 0, sec: 'side_retort' }),
       makeItem({ id: 3, name: '水', qty: 50, kcal: 0, waterL: 2, sec: 'drink' }),
       makeItem({ id: 4, name: 'お菓子', qty: 30, kcal: 200, waterL: 0, sec: 'snack' }),
       makeItem({ id: 5, name: '調味料', qty: 10, kcal: 50, waterL: 0, sec: 'seasoning' }),
@@ -210,7 +210,7 @@ describe('calcScore', () => {
     // 複数セクターに分散
     const itemsDiv = [
       makeItem({ id: 1, qty: 50, kcal: 250, waterL: 0.5, sec: 'staple' }),
-      makeItem({ id: 2, qty: 50, kcal: 250, waterL: 0.5, sec: 'side' }),
+      makeItem({ id: 2, qty: 50, kcal: 250, waterL: 0.5, sec: 'side_fish' }),
     ];
     const rMono = calcScore(itemsMono, members, targetDays);
     const rDiv = calcScore(itemsDiv, members, targetDays);

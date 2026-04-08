@@ -16,6 +16,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { ListScreen } from './src/screens/ListScreen';
 import { AnalysisScreen } from './src/screens/AnalysisScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
 
 import { AddModal } from './src/components/AddModal';
 import { EditModal } from './src/components/EditModal';
@@ -52,7 +53,7 @@ const TAB_SCREEN_OPTIONS = {
 };
 
 export default function App() {
-  const { items, members, regionId, isLoaded, saveItems, saveMembers, saveRegion } =
+  const { items, members, regionId, isLoaded, isOnboarded, saveItems, saveMembers, saveRegion, completeOnboarding } =
     useStore();
   const {
     addModalVisible, setAddModalVisible,
@@ -160,6 +161,24 @@ export default function App() {
           <ActivityIndicator size="large" color={COLORS.accent} />
         </View>
       </SafeAreaProvider>
+    );
+  }
+
+  // ── 初回起動: オンボーディング画面 ──
+  if (!isOnboarded) {
+    return (
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <OnboardingScreen
+            members={members}
+            regionId={regionId}
+            onMembersChange={saveMembers}
+            onRegionChange={saveRegion}
+            onComplete={completeOnboarding}
+          />
+        </SafeAreaProvider>
+      </ErrorBoundary>
     );
   }
 

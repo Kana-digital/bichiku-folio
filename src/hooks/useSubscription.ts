@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PlanId, SubscriptionState, AdState, PlanDefinition } from '../types';
 import { PLANS, AD_CONFIG } from '../constants/plans';
+import {
+  initRevenueCat,
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
+  checkSubscription,
+  isRCAvailable,
+} from '../services/revenueCat';
 
 const SUB_KEY = 'bichiku_subscription';
 const AD_KEY = 'bichiku_ad_state';
@@ -30,17 +38,20 @@ export function useSubscription() {
   const [adState, setAdState] = useState<AdState>(DEFAULT_AD);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // ── 読み込み ──
+  // ── 読み込み + RevenueCat初期化 ──
   useEffect(() => {
     (async () => {
       try {
+        // RevenueCat 初期化
+        await initRevenueCat();
+
+        // ローカルストレージから読み込み
         const [rawSub, rawAd] = await Promise.all([
           AsyncStorage.getItem(SUB_KEY),
           AsyncStorage.getItem(AD_KEY),
         ]);
         if (rawSub) {
           const parsed: SubscriptionState = JSON.parse(rawSub);
-          // 有効期限切れチェック
           if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
             const expired = { ...DEFAULT_SUB };
             await AsyncStorage.setItem(SUB_KEY, JSON.stringify(expired));
@@ -51,6 +62,20 @@ export function useSubscription() {
         }
         if (rawAd) {
           setAdState(JSON.parse(rawAd));
+        }
+
+        // RevenueCat が使える場合、サーバー側の状態を確認して同期
+        if (isRCAvailable()) {
+          const rcStatus = await checkSubscription();
+          if (rcStatus.isPremium) {
+            const synced: SubscriptionState = {
+              planId: 'premium',
+              entitlementId: 'premium_access',
+              expiresAt: rcStatus.expiresAt,
+            };
+            setSub(synced);
+            await AsyncStorage.setItem(SUB_KEY, JSON.stringify(synced));
+          }
         }
       } catch (e) {
         console.error('Failed to load subscription:', e);
@@ -82,17 +107,44 @@ export function useSubscription() {
     return 'image';
   }, [isPremium, adState.actionCount]);
 
-  // ── 購入処理 (RevenueCat導入時に差し替え) ──
+  // ── 購入処理（RevenueCat対応） ──
   const purchase = useCallback(
     async (period: 'monthly' | 'yearly') => {
-      // TODO: RevenueCat購入フロー
+      // RevenueCat が使える場合は本番フローを実行
+      if (isRCAvailable()) {
+        try {
+          const offering = await getOfferings();
+          if (!offering) return false;
+          const pkgId = period === 'monthly' ? '$rc_monthly' : '$rc_annual';
+          const pkg = offering.availablePackages.find(
+            (p: any) => p.packageType === pkgId || p.identifier === pkgId
+          ) ?? offering.availablePackages[0];
+          if (!pkg) return false;
+          const success = await purchasePackage(pkg);
+          if (success) {
+            const rcStatus = await checkSubscription();
+            const newSub: SubscriptionState = {
+              planId: 'premium',
+              entitlementId: 'premium_access',
+              expiresAt: rcStatus.expiresAt,
+            };
+            setSub(newSub);
+            await AsyncStorage.setItem(SUB_KEY, JSON.stringify(newSub));
+          }
+          return success;
+        } catch (e) {
+          console.error('[Purchase] RevenueCat購入エラー:', e);
+          return false;
+        }
+      }
+
+      // SDK未導入時のローカルフォールバック（開発用）
       const expiresAt = new Date();
       if (period === 'monthly') {
         expiresAt.setMonth(expiresAt.getMonth() + 1);
       } else {
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);
       }
-
       const newSub: SubscriptionState = {
         planId: 'premium',
         entitlementId: `local_${period}`,
@@ -105,9 +157,27 @@ export function useSubscription() {
     [],
   );
 
-  // ── 復元処理 (RevenueCat導入時に差し替え) ──
+  // ── 復元処理（RevenueCat対応） ──
   const restore = useCallback(async () => {
-    // TODO: RevenueCat復元フロー
+    if (isRCAvailable()) {
+      try {
+        const success = await restorePurchases();
+        if (success) {
+          const rcStatus = await checkSubscription();
+          const newSub: SubscriptionState = {
+            planId: 'premium',
+            entitlementId: 'premium_access',
+            expiresAt: rcStatus.expiresAt,
+          };
+          setSub(newSub);
+          await AsyncStorage.setItem(SUB_KEY, JSON.stringify(newSub));
+        }
+        return success;
+      } catch (e) {
+        console.error('[Restore] RevenueCat復元エラー:', e);
+        return false;
+      }
+    }
     return false;
   }, []);
 

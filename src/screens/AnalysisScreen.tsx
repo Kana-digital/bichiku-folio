@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   ScrollView,
   TouchableOpacity,
   Text,
+  Image,
   StyleSheet,
+  Linking,
+  LayoutChangeEvent,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { Bar } from '../components/Bar';
@@ -15,6 +18,13 @@ import { JP_AVG } from '../constants/jpAvg';
 import { SECTORS } from '../constants/sectors';
 import { GOV } from '../constants/ageKcal';
 import { StockItem, Member, ScoreResult } from '../types';
+import {
+  FALLBACK_ITEMS,
+  buildRakutenSearchUrl,
+  isRakutenConfigured,
+  getRecommendations,
+  type RakutenItem,
+} from '../services/rakuten';
 
 interface AnalysisScreenProps {
   items: StockItem[];
@@ -380,130 +390,74 @@ export const AnalysisScreen = ({
     );
   };
 
-  // ── 全国との比較 ──
-  const NationalComparison = () => {
-    const zones = [
-      { w: 40, label: '0〜3日分', col: '#FF8A65', dayRange: [0, 3] as const },
-      { w: 52.7, label: '3〜7日分', col: COLORS.yellow, dayRange: [3, 7] as const },
-      { w: 7.3, label: '7日分〜', col: COLORS.green, dayRange: [7, 999] as const },
-    ];
-    const userZone = sc.userDays < 3 ? 0 : sc.userDays < 7 ? 1 : 2;
+  // ── 全国との比較（インライン描画） ──
+  const [barWidth, setBarWidth] = useState(0);
+  const onBarLayout = useCallback((e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    setBarWidth((prev) => (Math.abs(prev - w) > 1 ? w : prev));
+  }, []);
 
-    // バー全体に対する左位置(%)を日数から算出（7日超は21日をMaxとして7.3%ゾーンに配分）
-    const dayToLeft = (days: number) => {
-      if (days <= 0) return 1;
-      if (days <= 3) return (days / 3) * 40;
-      if (days <= 7) return 40 + ((days - 3) / 4) * 52.7;
-      return Math.min(99, 92.7 + ((days - 7) / 14) * 7.3);
-    };
-    const userLeft = dayToLeft(sc.userDays);
-    const avgLeft = dayToLeft(JP_AVG.avgDays);  // 5.3日 → ~70%
-    const govLeft = 92.7;  // 7日: ゾーン境界
-    const regionLeft = dayToLeft(regionDays);  // 地域推奨位置
+  const ncZ1 = 0.35;
+  const ncZ2 = 0.42;
+  const ncZ3 = 0.23;
+  const ncZones = useMemo(() => [
+    { w: ncZ1, pct: 40,   label: '0〜3日分', col: '#FF8A65' },
+    { w: ncZ2, pct: 52.7, label: '3〜7日分', col: COLORS.yellow },
+    { w: ncZ3, pct: 7.3,  label: '7日分〜',  col: COLORS.green },
+  ], []);
+  const ncUserZone = sc.userDays < 3 ? 0 : sc.userDays < 7 ? 1 : 2;
 
-    return (
-      <View style={styles.sectionCard}>
-        <Text style={styles.cardTitle}>🇯🇵 全国との比較</Text>
-        <Text style={styles.cardSubtitle}>
-          出典：内閣府防災世論調査（2025）、農中総研調査（2024）
-        </Text>
+  // 日数 → バー内のピクセル位置
+  const ncDayToPx = useCallback((days: number): number => {
+    const d = Number.isFinite(days) && days > 0 ? days : 0;
+    const W = barWidth || 1;
+    if (d === 0) return 2;
+    if (d <= 3) return (d / 3) * ncZ1 * W;
+    if (d <= 7) return (ncZ1 + ((d - 3) / 4) * ncZ2) * W;
+    const z3Pos = Math.min(ncZ3 - 0.02, ((d - 7) / 21) * ncZ3);
+    return (ncZ1 + ncZ2 + z3Pos) * W;
+  }, [barWidth]);
 
-        {/* バー本体（重ねレイヤー） */}
-        <View style={{ position: 'relative' }}>
-          {/* ゾーンバー */}
-          <View style={{ flexDirection: 'row', borderRadius: 10, overflow: 'hidden', height: 44 }}>
-            {zones.map((z, i) => {
-              const isUser = i === userZone;
-              return (
-                <View
-                  key={i}
-                  style={{
-                    width: `${z.w}%`,
-                    backgroundColor: z.col + (isUser ? '30' : '12'),
-                    borderRightWidth: i < 2 ? 1 : 0,
-                    borderRightColor: COLORS.border,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: z.col }}>{z.w}%</Text>
-                  <Text style={{ fontSize: 8, color: COLORS.textSub }}>{z.label}</Text>
-                </View>
-              );
-            })}
-          </View>
-          {/* 全国平均ライン + ラベル */}
-          <View style={{ position: 'absolute', left: `${avgLeft}%`, top: -14, bottom: -14, alignItems: 'center', zIndex: 3 }}>
-            <Text style={{ fontSize: 8, color: COLORS.yellow, fontWeight: '600', marginBottom: 1 }}>
-              平均{JP_AVG.avgDays}日
-            </Text>
-            <View style={{ width: 2, flex: 1, backgroundColor: COLORS.yellow + '88' }} />
-            <Text style={{ fontSize: 7, color: COLORS.yellow, marginTop: 1 }}>▲</Text>
-          </View>
-          {/* 内閣府推奨7日ライン + ラベル（7.3%ゾーンの左端） */}
-          <View style={{ position: 'absolute', left: `${govLeft}%`, top: -14, bottom: -14, alignItems: 'flex-start', zIndex: 3 }}>
-            <Text style={{ fontSize: 8, color: COLORS.blue, fontWeight: '600', marginBottom: 1, marginLeft: -2 }}>
-              内閣府推奨7日
-            </Text>
-            <View style={{ width: 2, flex: 1, backgroundColor: COLORS.blue + '88' }} />
-            <Text style={{ fontSize: 7, color: COLORS.blue, marginTop: 1 }}>▲</Text>
-          </View>
-          {/* 地域推奨ライン（7日超の場合のみ別線で表示） */}
-          {regionDays > 7 && (
-            <View style={{ position: 'absolute', left: `${regionLeft}%`, top: 0, bottom: -14, alignItems: 'center', zIndex: 4 }}>
-              <View style={{ width: 2, flex: 1, backgroundColor: COLORS.green + '88' }} />
-              <Text style={{ fontSize: 7, color: COLORS.green, marginTop: 1 }}>▲</Text>
-            </View>
-          )}
-          {/* あなたマーカー */}
-          <View style={{ position: 'absolute', left: `${userLeft}%`, top: 0, bottom: 0, width: 3, backgroundColor: COLORS.accent, zIndex: 5 }} />
-        </View>
+  const ncClamp = useCallback((v: number) => Math.max(2, Math.min((barWidth || 100) - 2, v)), [barWidth]);
+  const ncUserPx = ncClamp(ncDayToPx(sc.userDays));
+  const ncAvgPx = ncClamp(ncDayToPx(JP_AVG.avgDays));
+  const ncGovPx = ncClamp((ncZ1 + ncZ2) * (barWidth || 1));
+  const ncRegionPx = ncClamp(ncDayToPx(regionDays));
 
-        {/* バー下ラベル */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-          <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.accent }}>
-            ▲ あなた {sc.userDays.toFixed(1)}日分
-          </Text>
-          <Text style={{ fontSize: 9, fontWeight: '600', color: COLORS.green }}>
-            地域推奨 {regionDays}日
-          </Text>
-        </View>
+  // ── 不足セクター算出 ──
+  const weakSectors = useMemo(() => {
+    return SECTORS
+      .map((s) => {
+        const sKcal = items
+          .filter((i) => i.sec === s.id)
+          .reduce((a, i) => a + (i.qty ?? 0) * (i.kcal ?? 0), 0);
+        const ratio = sc.totalKcal > 0 ? sKcal / sc.totalKcal : 0;
+        return { id: s.id, diff: ratio - s.targetRatio };
+      })
+      .filter((s) => s.diff < -0.02)
+      .sort((a, b) => a.diff - b.diff)
+      .map((s) => s.id);
+  }, [items, sc]);
 
-        {/* 補足テキスト */}
-        <View style={[styles.zoneIndicator, { backgroundColor: zones[userZone].col + '11', borderColor: zones[userZone].col + '33' }]}>
-          <Text style={{ fontSize: 10, color: zones[userZone].col, fontWeight: '700' }}>
-            あなたは「{zones[userZone].label}」のエリアにいます
-          </Text>
-        </View>
-      </View>
-    );
-  };
+  // ── 楽天API商品（API設定時） ──
+  const [rakutenItems, setRakutenItems] = useState<RakutenItem[]>([]);
+  useEffect(() => {
+    if (isRakutenConfigured() && weakSectors.length > 0) {
+      getRecommendations(weakSectors)
+        .then((r) => setRakutenItems(r))
+        .catch(() => {});
+    }
+  }, [weakSectors]);
 
-  // ── パートナー提携 ──
-  const Partners = () => {
-    const products = [
-      { name: '防災セットPRO', brand: 'BOUSAI Co.', price: '¥12,800', img: '🎒' },
-      { name: '10年保存水 2L×6', brand: 'AquaSafe', price: '¥2,480', img: '💧' },
-      { name: 'ソーラー充電ラジオ', brand: 'EmgTech', price: '¥4,980', img: '📻' },
-    ];
-    return (
-      <View style={[styles.sectionCard, { borderColor: COLORS.purple + '33', backgroundColor: COLORS.purple + '11' }]}>
-        <Text style={[styles.cardTitle, { color: COLORS.purple }]}>🤝 パートナー提携</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-          {products.map((p, i) => (
-            <View key={i} style={styles.partnerCard}>
-              <Text style={{ fontSize: 28, marginBottom: 4 }}>{p.img}</Text>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.text }}>{p.name}</Text>
-              <Text style={{ fontSize: 9, color: COLORS.textSub }}>{p.brand}</Text>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.accent, marginTop: 3 }}>
-                {p.price}
-              </Text>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  };
+  // ── おすすめ商品（フォールバック or API） ──
+  const recommendedFallbacks = useMemo(() => {
+    const matched = FALLBACK_ITEMS.filter((f) => weakSectors.includes(f.sectorId));
+    if (matched.length >= 3) return matched.slice(0, 4);
+    const rest = FALLBACK_ITEMS.filter((f) => !weakSectors.includes(f.sectorId));
+    return [...matched, ...rest].slice(0, 4);
+  }, [weakSectors]);
+
+  const hasApi = isRakutenConfigured() && rakutenItems.length > 0;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -546,11 +500,158 @@ export const AnalysisScreen = ({
       {/* 政府推奨基準との比較 */}
       <GovComparison />
 
-      {/* 全国との比較 */}
-      <NationalComparison />
+      {/* ── 全国との比較（インライン） ── */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.cardTitle}>🇯🇵 全国との比較</Text>
+        <Text style={styles.cardSubtitle}>
+          出典：内閣府防災世論調査（2025）、農中総研調査（2024）
+        </Text>
+        {/* 上ラベル行1: 平均 */}
+        <View style={{ position: 'relative', height: 12, marginBottom: 1 }} onLayout={onBarLayout}>
+          {barWidth > 0 && (
+            <Text style={{ position: 'absolute', left: Math.max(0, ncAvgPx - 18), fontSize: 8, color: COLORS.yellow, fontWeight: '600' }}>
+              平均{JP_AVG.avgDays}日
+            </Text>
+          )}
+        </View>
+        {/* 上ラベル行2: 内閣府推奨 */}
+        <View style={{ position: 'relative', height: 12, marginBottom: 1 }}>
+          {barWidth > 0 && (
+            <Text style={{ position: 'absolute', left: Math.max(0, Math.min(ncGovPx - 24, (barWidth || 300) - 60)), fontSize: 8, color: COLORS.blue, fontWeight: '600' }}>
+              内閣府推奨7日
+            </Text>
+          )}
+        </View>
+        {/* バー本体 */}
+        <View style={{ position: 'relative' }}>
+          <View style={{ flexDirection: 'row', borderRadius: 10, overflow: 'hidden', height: 44 }}>
+            {ncZones.map((z, i) => {
+              const isUser = i === ncUserZone;
+              return (
+                <View
+                  key={i}
+                  style={{
+                    flex: z.w,
+                    backgroundColor: z.col + (isUser ? '30' : '12'),
+                    borderRightWidth: i < 2 ? 1 : 0,
+                    borderRightColor: COLORS.border,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: z.col }}>{z.pct}%</Text>
+                  <Text style={{ fontSize: 8, color: COLORS.textSub }}>{z.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+          {barWidth > 0 && (
+            <>
+              {/* 平均の縦線 — バーを突き抜けて上下ラベルまで伸ばす */}
+              <View style={{ position: 'absolute', left: ncAvgPx - 1, top: -14, bottom: 0, width: 2, backgroundColor: COLORS.yellow + '88', zIndex: 3 }} />
+              {/* 内閣府推奨の縦線 */}
+              <View style={{ position: 'absolute', left: ncGovPx - 1, top: -1, bottom: 0, width: 2, backgroundColor: COLORS.blue + '88', zIndex: 3 }} />
+              {/* 地域推奨の縦線 */}
+              {regionDays > 7 && (
+                <View style={{ position: 'absolute', left: ncRegionPx - 1, top: 0, bottom: -14, width: 2, backgroundColor: COLORS.green + '88', zIndex: 4 }} />
+              )}
+              {/* あなたのマーカー */}
+              <View style={{ position: 'absolute', left: ncUserPx - 1.5, top: 0, bottom: -14, width: 3, borderRadius: 1.5, backgroundColor: '#E8709A', zIndex: 5 }} />
+            </>
+          )}
+        </View>
+        {/* 下ラベル行1: あなた */}
+        <View style={{ position: 'relative', height: 14, marginTop: 1 }}>
+          {barWidth > 0 && (
+            <Text style={{ position: 'absolute', left: ncUserPx - 36, top: 0, fontSize: 9, fontWeight: '700', color: '#E8709A', width: 72, textAlign: 'center' }}>
+              あなた{sc.userDays.toFixed(1)}日
+            </Text>
+          )}
+        </View>
+        {/* 下ラベル行2: 地域推奨 */}
+        {regionDays > 7 && (
+          <View style={{ position: 'relative', height: 14 }}>
+            {barWidth > 0 && (
+              <Text style={{ position: 'absolute', left: Math.max(0, Math.min(ncRegionPx - 22, (barWidth || 300) - 70)), top: 0, fontSize: 9, fontWeight: '600', color: COLORS.green }}>
+                地域推奨{regionDays}日
+              </Text>
+            )}
+          </View>
+        )}
+        <View style={[styles.zoneIndicator, { backgroundColor: ncZones[ncUserZone].col + '11', borderColor: ncZones[ncUserZone].col + '33' }]}>
+          <Text style={{ fontSize: 10, color: ncZones[ncUserZone].col, fontWeight: '700' }}>
+            あなたは「{ncZones[ncUserZone].label}」のエリアにいます
+          </Text>
+        </View>
+      </View>
 
-      {/* パートナー提携 */}
-      <Partners />
+      {/* ── おすすめ商品（インライン） ── */}
+      <View style={[styles.sectionCard, { borderColor: COLORS.orange + '33', backgroundColor: COLORS.orange + '08' }]}>
+        <Text style={[styles.cardTitle, { color: COLORS.orange }]}>🛒 おすすめ商品</Text>
+        <Text style={styles.cardSubtitle}>
+          {weakSectors.length > 0 ? 'スコアの低いセクターに合わせて厳選' : '備蓄の定番アイテム'}
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+          {hasApi
+            ? rakutenItems.map((item, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.partnerCard}
+                  onPress={() => Linking.openURL(item.affiliateUrl)}
+                >
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
+                  ) : (
+                    <View style={[styles.productImage, styles.productImagePlaceholder]}>
+                      <Text style={{ fontSize: 20 }}>📦</Text>
+                    </View>
+                  )}
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.text }} numberOfLines={2}>
+                    {item.itemName}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: COLORS.textSub }}>{item.shopName}</Text>
+                  {item.reviewCount > 0 && (
+                    <Text style={{ fontSize: 8, color: COLORS.yellow }}>
+                      ★{item.reviewAverage.toFixed(1)} ({item.reviewCount})
+                    </Text>
+                  )}
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.accent, marginTop: 3 }}>
+                    ¥{item.itemPrice.toLocaleString()}
+                  </Text>
+                  <Text style={{ fontSize: 7, color: COLORS.textSub, marginTop: 2 }}>楽天市場で見る →</Text>
+                </TouchableOpacity>
+              ))
+            : recommendedFallbacks.map((p, i) => {
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={styles.partnerCard}
+                    onPress={() => Linking.openURL(buildRakutenSearchUrl(p.searchQuery))}
+                  >
+                    {p.imageUrl ? (
+                      <Image source={{ uri: p.imageUrl }} style={styles.productImage} resizeMode="contain" />
+                    ) : (
+                      <View style={[styles.productImage, styles.productImagePlaceholder]}>
+                        <Text style={{ fontSize: 20 }}>{p.icon}</Text>
+                      </View>
+                    )}
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.text }} numberOfLines={2}>
+                      {p.name}
+                    </Text>
+                    <Text style={{ fontSize: 9, color: COLORS.textSub }}>{p.brand}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.accent, marginTop: 3 }}>
+                      {p.price}〜
+                    </Text>
+                    <Text style={{ fontSize: 7, color: COLORS.textSub, marginTop: 2 }}>楽天市場で探す →</Text>
+                  </TouchableOpacity>
+                );
+              })
+          }
+        </ScrollView>
+        <Text style={{ fontSize: 7, color: COLORS.textSub, marginTop: 6, textAlign: 'center', opacity: 0.6 }}>
+          ※ 楽天市場の商品ページに移動します
+        </Text>
+      </View>
     </ScrollView>
   );
 };
@@ -777,7 +878,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     minWidth: 120,
+    maxWidth: 140,
     alignItems: 'center',
     marginRight: 8,
+  },
+  productImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 6,
+    marginBottom: 6,
+    backgroundColor: COLORS.bg,
+  },
+  productImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

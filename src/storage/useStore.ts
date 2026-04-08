@@ -6,12 +6,14 @@ import { DEFAULT_MEMBERS } from '../constants/ageKcal';
 const ITEMS_KEY = 'bichiku_items';
 const MEMBERS_KEY = 'bichiku_members';
 const REGION_KEY = 'bichiku_region';
+const ONBOARDED_KEY = 'bichiku_onboarded';
 
 export function useStore() {
   const [items, setItems] = useState<StockItem[]>([]);
   const [members, setMembers] = useState<Member[]>(DEFAULT_MEMBERS);
   const [regionId, setRegionId] = useState<string>('nankai');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -19,11 +21,14 @@ export function useStore() {
 
   const loadData = useCallback(async () => {
     try {
-      const [itemsData, membersData, regionData] = await Promise.all([
+      const [itemsData, membersData, regionData, onboardedData] = await Promise.all([
         AsyncStorage.getItem(ITEMS_KEY),
         AsyncStorage.getItem(MEMBERS_KEY),
         AsyncStorage.getItem(REGION_KEY),
+        AsyncStorage.getItem(ONBOARDED_KEY),
       ]);
+
+      setIsOnboarded(onboardedData === 'true');
 
       if (itemsData) {
         const parsed = JSON.parse(itemsData);
@@ -86,14 +91,25 @@ export function useStore() {
     }
   }, []);
 
+  const completeOnboarding = useCallback(async () => {
+    try {
+      setIsOnboarded(true);
+      await AsyncStorage.setItem(ONBOARDED_KEY, 'true');
+    } catch (error) {
+      console.error('Failed to save onboarding state:', error);
+    }
+  }, []);
+
   return {
     items,
     members,
     regionId,
     isLoaded,
+    isOnboarded,
     loadData,
     saveItems,
     saveMembers,
     saveRegion,
+    completeOnboarding,
   };
 }

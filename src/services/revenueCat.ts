@@ -121,4 +121,7 @@ export async function checkSubscription(): Promise<{
   }
 }
 
-export { isAvailable };
+/** SDK利用可否を取得（initRevenueCat後に変わる） */
+export function isRCAvailable(): boolean {
+  return isAvailable;
+}
