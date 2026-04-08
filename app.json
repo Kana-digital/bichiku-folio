@@ -12,24 +12,24 @@
       "infoPlist": {
         "GADApplicationIdentifier": "ca-app-pub-1593750663073581~7006772992",
         "SKAdNetworkItems": [
-          {
-            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
-          },
-          {
-            "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork"
-          },
-          {
-            "SKAdNetworkIdentifier": "2fnua5tdw4.skadnetwork"
-          },
-          {
-            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
-          },
-          {
-            "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork"
-          },
-          {
-            "SKAdNetworkIdentifier": "2fnua5tdw4.skadnetwork"
-          }
+          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" },
+          { "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork" },
+          { "SKAdNetworkIdentifier": "2fnua5tdw4.skadnetwork" },
+          { "SKAdNetworkIdentifier": "4pfyvq9l8r.skadnetwork" },
+          { "SKAdNetworkIdentifier": "yclnxrl5pm.skadnetwork" },
+          { "SKAdNetworkIdentifier": "v72qych5uu.skadnetwork" },
+          { "SKAdNetworkIdentifier": "tl55sbb4fm.skadnetwork" },
+          { "SKAdNetworkIdentifier": "t38b2kh725.skadnetwork" },
+          { "SKAdNetworkIdentifier": "prcb7njmu6.skadnetwork" },
+          { "SKAdNetworkIdentifier": "ppxm28t8ap.skadnetwork" },
+          { "SKAdNetworkIdentifier": "mlmmfzh3r3.skadnetwork" },
+          { "SKAdNetworkIdentifier": "klf5c3l5u5.skadnetwork" },
+          { "SKAdNetworkIdentifier": "hs6bdukanm.skadnetwork" },
+          { "SKAdNetworkIdentifier": "9rd848q77k.skadnetwork" },
+          { "SKAdNetworkIdentifier": "9t245vhmpl.skadnetwork" },
+          { "SKAdNetworkIdentifier": "7ug5zh24hu.skadnetwork" },
+          { "SKAdNetworkIdentifier": "5a6flpkh64.skadnetwork" },
+          { "SKAdNetworkIdentifier": "3rd42ekr43.skadnetwork" }
         ],
         "NSUserTrackingUsageDescription": "広告のパーソナライズのために使用します。許可しない場合でもアプリはご利用いただけます。",
         "ITSAppUsesNonExemptEncryption": false
@@ -41,6 +41,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-1593750663073581~7006772992"
       }
     },
     "web": {
@@ -48,7 +51,14 @@
     },
     "scheme": "bichiku-folio",
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-1593750663073581~7006772992",
+          "iosAppId": "ca-app-pub-1593750663073581~7006772992"
+        }
+      ]
     ],
     "extra": {
       "eas": {
