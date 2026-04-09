@@ -11,6 +11,7 @@
 import { Platform } from 'react-native';
 import { StockItem } from '../types';
 import { checkExpiryAlerts, ExpiryAlert } from '../utils/notifications';
+import { logger } from '../utils/logger';
 
 let Notifications: any = null;
 let Device: any = null;
@@ -27,7 +28,7 @@ export async function initNotifications(): Promise<boolean> {
 
     // 実機でのみ通知を有効にする
     if (!Device.isDevice) {
-      console.log('[Notifications] シミュレーターでは通知をスキップ');
+      logger.log('[Notifications] シミュレーターでは通知をスキップ');
       return false;
     }
 
@@ -51,7 +52,7 @@ export async function initNotifications(): Promise<boolean> {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('[Notifications] 通知が許可されていません');
+      logger.log('[Notifications] 通知が許可されていません');
       return false;
     }
 
@@ -65,10 +66,10 @@ export async function initNotifications(): Promise<boolean> {
     });
 
     isAvailable = true;
-    console.log('[Notifications] 初期化完了');
+    logger.log('[Notifications] 初期化完了');
     return true;
   } catch (e) {
-    console.warn('[Notifications] SDK が見つかりません:', e);
+    logger.warn('[Notifications] SDK が見つかりません:', e);
     return false;
   }
 }
@@ -147,7 +148,7 @@ export async function scheduleExpiryNotifications(items: StockItem[]): Promise<n
       }
     }
 
-    console.log(`[Notifications] ${scheduled}件の通知をスケジュール`);
+    logger.log(`[Notifications] ${scheduled}件の通知をスケジュール`);
     return scheduled;
   } catch (e) {
     console.error('[Notifications] スケジュールエラー:', e);

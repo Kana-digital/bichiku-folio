@@ -1,15 +1,15 @@
 /**
  * RevenueCat 連携サービス
  *
- * 📌 セットアップ手順:
- * 1. RevenueCat (https://app.revenuecat.com) でアカウント作成
- * 2. App Store / Google Play のアプリを登録
- * 3. 「Entitlements」に "premium_access" を作成
- * 4. 「Products」に以下を登録:
- *    - bichiku_adfree_monthly (¥110/月) — 広告非表示
- *    - bichiku_adfree_yearly  (¥980/年) — 広告非表示（一括）
- * 5. 「Offerings」> "default" に上記 Products を Package として追加
- * 6. API Keys を取得し .env に設定
+ * 📌 セットアップ完了:
+ * 1. RevenueCat アカウント作成済み ✅
+ * 2. Entitlement: "Bichiku Folio Pro" ✅
+ * 3. Offering: Monthly / Yearly / Lifetime ✅
+ * 4. Google Play Store 接続済み ✅ (com.bichikufolio.app)
+ * 5. API Key 設定済み（Android本番 / iOSはApp Store登録後に差し替え） ✅
+ * 6. Google Play Service Account JSON → RevenueCat 設定済み ✅
+ * 7. Google Play Console にサービスアカウント招待済み ✅
+ * 8. TODO: App Store のアプリを登録し、iOS 本番 API Key に差し替え
  *
  * 📌 パッケージインストール:
  *   npx expo install react-native-purchases
@@ -21,11 +21,13 @@
 
 import { Platform } from 'react-native';
 import { RC_ENTITLEMENT } from '../constants/plans';
+import { logger } from '../utils/logger';
 
 // ── 設定 ──
-// 本番時は環境変数から読み込む
-const API_KEY_IOS = 'YOUR_REVENUECAT_IOS_API_KEY';
-const API_KEY_ANDROID = 'YOUR_REVENUECAT_ANDROID_API_KEY';
+// iOS: App Store登録後に本番キーに差し替え（現在はテスト用）
+// Android: Google Play Store 本番キー設定済み
+const API_KEY_IOS = 'test_FXUbXdIRyYSTIcbSugJxFuTiqfu';
+const API_KEY_ANDROID = 'goog_nuKUVImUqftNBCdneJpnvOIfziP';
 
 /** RevenueCat SDK が利用可能かどうか */
 let isAvailable = false;
@@ -42,15 +44,15 @@ export async function initRevenueCat(): Promise<void> {
     const apiKey = Platform.OS === 'ios' ? API_KEY_IOS : API_KEY_ANDROID;
 
     if (apiKey.startsWith('YOUR_')) {
-      console.warn('[RevenueCat] API Key が未設定です。ローカルモードで動作します。');
+      logger.warn('[RevenueCat] API Key が未設定です。ローカルモードで動作します。');
       return;
     }
 
     await Purchases.configure({ apiKey });
     isAvailable = true;
-    console.log('[RevenueCat] 初期化完了');
+    logger.log('[RevenueCat] 初期化完了');
   } catch (e) {
-    console.warn('[RevenueCat] SDK が見つかりません。ローカルモードで動作します。', e);
+    logger.warn('[RevenueCat] SDK が見つかりません。ローカルモードで動作します。', e);
   }
 }
 

@@ -18,7 +18,7 @@ export const PLANS: Record<string, PlanDefinition> = {
 };
 
 /** RevenueCat の Entitlement identifier */
-export const RC_ENTITLEMENT = 'premium_access';
+export const RC_ENTITLEMENT = 'Bichiku Folio Pro';
 
 /** 価格表示用 */
 export const PRICING = {

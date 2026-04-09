@@ -53,8 +53,12 @@ const TAB_SCREEN_OPTIONS = {
 };
 
 export default function App() {
-  const { items, members, regionId, isLoaded, isOnboarded, saveItems, saveMembers, saveRegion, completeOnboarding } =
-    useStore();
+  const {
+    items, members, regionId, isLoaded, isOnboarded,
+    saveItems, saveMembers, saveRegion, completeOnboarding,
+    uid, family, isSyncing,
+    createFamily, joinFamily, leaveFamily,
+  } = useStore();
   const {
     addModalVisible, setAddModalVisible,
     consumeModalVisible, setConsumeModalVisible,
@@ -176,6 +180,22 @@ export default function App() {
             onMembersChange={saveMembers}
             onRegionChange={saveRegion}
             onComplete={completeOnboarding}
+            isPremium={isPremium}
+            onUpgrade={openPaywall}
+            uid={uid}
+            family={family}
+            onCreateFamily={createFamily}
+            onJoinFamily={joinFamily}
+            onLinkEmail={async (email: string, password: string) => {
+              const { linkEmail } = require('./src/services/authService');
+              return linkEmail(email, password);
+            }}
+          />
+          <PaywallModal
+            visible={paywallVisible}
+            onClose={closePaywall}
+            onPurchase={purchase}
+            onRestore={restore}
           />
         </SafeAreaProvider>
       </ErrorBoundary>
@@ -280,6 +300,12 @@ export default function App() {
                     onRegionChange={saveRegion}
                     isPremium={isPremium}
                     onUpgrade={openPaywall}
+                    uid={uid}
+                    family={family}
+                    isSyncing={isSyncing}
+                    onCreateFamily={createFamily}
+                    onJoinFamily={joinFamily}
+                    onLeaveFamily={leaveFamily}
                   />
                 </SwipeWrapper>
               )}

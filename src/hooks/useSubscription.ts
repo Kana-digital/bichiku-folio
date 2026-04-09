@@ -10,6 +10,7 @@ import {
   checkSubscription,
   isRCAvailable,
 } from '../services/revenueCat';
+import { logger } from '../utils/logger';
 
 const SUB_KEY = 'bichiku_subscription';
 const AD_KEY = 'bichiku_ad_state';
@@ -78,7 +79,7 @@ export function useSubscription() {
           }
         }
       } catch (e) {
-        console.error('Failed to load subscription:', e);
+        logger.error('Failed to load subscription:', e);
       }
       setIsLoaded(true);
     })();
@@ -133,7 +134,7 @@ export function useSubscription() {
           }
           return success;
         } catch (e) {
-          console.error('[Purchase] RevenueCat購入エラー:', e);
+          logger.error('[Purchase] RevenueCat購入エラー:', e);
           return false;
         }
       }
@@ -174,7 +175,7 @@ export function useSubscription() {
         }
         return success;
       } catch (e) {
-        console.error('[Restore] RevenueCat復元エラー:', e);
+        logger.error('[Restore] RevenueCat復元エラー:', e);
         return false;
       }
     }

@@ -23,6 +23,7 @@
 
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { logger } from '../utils/logger';
 
 /** Expo Go 上で動作しているか判定 */
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -73,7 +74,7 @@ let loadedRewarded: any = null;
 export async function initAdMob(): Promise<boolean> {
   // Expo Go ではネイティブモジュールが使えないため、即座にスキップ
   if (isExpoGo) {
-    console.log('[AdMob] Expo Go 検出 → プレースホルダーモードで動作します');
+    logger.log('[AdMob] Expo Go 検出 → プレースホルダーモードで動作します');
     return false;
   }
   try {
@@ -89,7 +90,7 @@ export async function initAdMob(): Promise<boolean> {
     await MobileAds().initialize();
 
     sdkAvailable = true;
-    console.log('[AdMob] 初期化完了');
+    logger.log('[AdMob] 初期化完了');
 
     // 最初の広告をプリロード
     preloadInterstitial();
@@ -97,7 +98,7 @@ export async function initAdMob(): Promise<boolean> {
 
     return true;
   } catch (e) {
-    console.warn(
+    logger.warn(
       '[AdMob] SDK が見つかりません。プレースホルダーモードで動作します。',
       'EAS Development Build を使用してください。',
     );
@@ -115,7 +116,7 @@ function preloadInterstitial() {
     });
     ad.addAdEventListener(AdEventType.LOADED, () => {
       loadedInterstitial = ad;
-      console.log('[AdMob] インタースティシャル読み込み完了');
+      logger.log('[AdMob] インタースティシャル読み込み完了');
     });
     ad.addAdEventListener(AdEventType.CLOSED, () => {
       loadedInterstitial = null;
@@ -123,14 +124,14 @@ function preloadInterstitial() {
       preloadInterstitial();
     });
     ad.addAdEventListener(AdEventType.ERROR, (error: any) => {
-      console.warn('[AdMob] インタースティシャル読み込みエラー:', error);
+      logger.warn('[AdMob] インタースティシャル読み込みエラー:', error);
       loadedInterstitial = null;
       // 5秒後にリトライ
       setTimeout(preloadInterstitial, 5000);
     });
     ad.load();
   } catch (e) {
-    console.warn('[AdMob] インタースティシャル作成エラー:', e);
+    logger.warn('[AdMob] インタースティシャル作成エラー:', e);
   }
 }
 
@@ -140,14 +141,14 @@ function preloadInterstitial() {
  */
 export async function showInterstitial(): Promise<boolean> {
   if (!sdkAvailable || !loadedInterstitial) {
-    console.log('[AdMob] インタースティシャル未読み込み（フォールバック）');
+    logger.log('[AdMob] インタースティシャル未読み込み（フォールバック）');
     return false;
   }
   try {
     await loadedInterstitial.show();
     return true;
   } catch (e) {
-    console.warn('[AdMob] インタースティシャル表示エラー:', e);
+    logger.warn('[AdMob] インタースティシャル表示エラー:', e);
     loadedInterstitial = null;
     preloadInterstitial();
     return false;
@@ -165,23 +166,23 @@ function preloadRewarded() {
     );
     ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
       loadedRewarded = ad;
-      console.log('[AdMob] リワードインタースティシャル読み込み完了');
+      logger.log('[AdMob] リワードインタースティシャル読み込み完了');
     });
     ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
-      console.log('[AdMob] リワード獲得');
+      logger.log('[AdMob] リワード獲得');
     });
     ad.addAdEventListener(AdEventType.CLOSED, () => {
       loadedRewarded = null;
       preloadRewarded();
     });
     ad.addAdEventListener(AdEventType.ERROR, (error: any) => {
-      console.warn('[AdMob] リワード読み込みエラー:', error);
+      logger.warn('[AdMob] リワード読み込みエラー:', error);
       loadedRewarded = null;
       setTimeout(preloadRewarded, 5000);
     });
     ad.load();
   } catch (e) {
-    console.warn('[AdMob] リワード作成エラー:', e);
+    logger.warn('[AdMob] リワード作成エラー:', e);
   }
 }
 
@@ -191,14 +192,14 @@ function preloadRewarded() {
  */
 export async function showRewardedInterstitial(): Promise<boolean> {
   if (!sdkAvailable || !loadedRewarded) {
-    console.log('[AdMob] リワード未読み込み（フォールバック）');
+    logger.log('[AdMob] リワード未読み込み（フォールバック）');
     return false;
   }
   try {
     await loadedRewarded.show();
     return true;
   } catch (e) {
-    console.warn('[AdMob] リワード表示エラー:', e);
+    logger.warn('[AdMob] リワード表示エラー:', e);
     loadedRewarded = null;
     preloadRewarded();
     return false;

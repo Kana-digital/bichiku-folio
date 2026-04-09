@@ -14,6 +14,7 @@ import { calcScore, getMemberKcal, getMemberWater } from '../utils/scoring';
 import { daysUntil } from '../utils/date';
 import { JP_AVG } from '../constants/jpAvg';
 import { StockItem, Member } from '../types';
+import { logger } from '../utils/logger';
 
 interface HomeScreenProps {
   items: StockItem[];
@@ -100,7 +101,7 @@ export const HomeScreen = ({
     const allKnown = new Set([...chartSectorIds, 'drink', 'bousai', 'seasoning']);
     const unknowns = items.filter((i) => !allKnown.has(i.sec));
     if (unknowns.length > 0) {
-      console.log('[PieChart] 不明セクターID:', unknowns.map((i) => ({ name: i.name, sec: i.sec, kcal: i.kcal, qty: i.qty })));
+      logger.log('[PieChart] 不明セクターID:', unknowns.map((i) => ({ name: i.name, sec: i.sec, kcal: i.kcal, qty: i.qty })));
     }
     const chartItems = items.filter((i) => chartSectorIds.has(i.sec));
 
@@ -280,14 +281,17 @@ export const HomeScreen = ({
                   </>
                 ) : (
                   <>
-                    <SvgText x="100" y="92" textAnchor="middle" fontSize="16" fontWeight="800" fill={COLORS.text}>
+                    <SvgText x="100" y="85" textAnchor="middle" fontSize="16" fontWeight="800" fill={COLORS.text}>
                       {pieData.totalKcal.toLocaleString()}
                     </SvgText>
-                    <SvgText x="100" y="106" textAnchor="middle" fontSize="8" fill={COLORS.textSub}>
+                    <SvgText x="100" y="98" textAnchor="middle" fontSize="8" fill={COLORS.textSub}>
                       kcal（食品のみ）
                     </SvgText>
-                    <SvgText x="100" y="118" textAnchor="middle" fontSize="7" fill={COLORS.textSub}>
-                      目標 {sc.reqKcal.toLocaleString()} kcal
+                    <SvgText x="100" y="111" textAnchor="middle" fontSize="7" fill={COLORS.textSub}>
+                      目標
+                    </SvgText>
+                    <SvgText x="100" y="121" textAnchor="middle" fontSize="7" fill={COLORS.textSub}>
+                      {sc.reqKcal.toLocaleString()} kcal
                     </SvgText>
                   </>
                 )}

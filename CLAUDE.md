@@ -11,7 +11,9 @@
 - フレームワーク：React Native 0.81.5 + Expo SDK 54
 - React：19.1.0
 - ナビゲーション：@react-navigation/native 6.x + bottom-tabs
-- データ永続化：AsyncStorage（ローカルのみ）
+- データ永続化：AsyncStorage（ローカル）+ Cloud Firestore（家族同期）
+- 認証：Firebase Anonymous Auth → メールアドレス紐付けでアカウント復元
+- 同期：Firebase JS SDK v10（モジュラー）→ Expo Go 互換
 - グラフ描画：react-native-svg
 - 課金：RevenueCat（react-native-purchases）
 - 広告：AdMob（react-native-google-mobile-ads）
@@ -24,19 +26,24 @@ App.tsx（エントリ・ナビ・モーダル管理）
 │   ├── HomeScreen        → スコア表示・カテゴリ一覧・ドーナツチャート（タップ対応）
 │   ├── ListScreen        → 在庫リスト（期限ステータス別グループ）
 │   ├── AnalysisScreen    → スコア詳細・全国比較・栄養分析・おすすめ商品
-│   ├── SettingsScreen    → 家族構成・地域設定
+│   ├── SettingsScreen    → 家族構成・地域設定・家族同期・アカウント管理
 │   └── OnboardingScreen  → 初回起動チュートリアル
 ├── components/
 │   ├── AddModal          → 商品追加（150+プリセット・オートコンプリート）
 │   ├── EditModal         → 商品編集
 │   ├── ConsumeModal      → 消費記録
 │   ├── AdModal           → 広告表示（AdMob / プレースホルダー自動切替）
+│   ├── FamilySection     → 家族グループ管理（作成/参加/脱退/招待コード共有）
+│   ├── AccountSection    → アカウント管理（メールアドレス紐付け）
 │   └── ...
 ├── hooks/
 │   ├── useSubscription   → サブスク+広告制御（RevenueCat統合済み）
 │   ├── useItemActions    → 追加・編集・削除アクション
 │   └── useTabSwipe       → タブスワイプナビ
 ├── services/
+│   ├── firebase.ts       → Firebase初期化（AsyncStorage永続化・シングルトン）
+│   ├── authService.ts    → 認証サービス（匿名サインイン・メール紐付け）
+│   ├── familyService.ts  → 家族グループCRUD・リアルタイム同期
 │   ├── admob.ts          → AdMob SDK wrapper（Expo Goフォールバック付き）
 │   ├── revenueCat.ts     → RevenueCat SDK wrapper（API Key設定で有効化）
 │   └── rakuten.ts        → 楽天商品検索（静的CDN画像URL付きフォールバック）
@@ -64,7 +71,19 @@ StockItem { id, name, sec, qty, kcal, waterL, expiry, loc }
 Member { id, typeId }  // 家族構成員（10年齢カテゴリ）
 RegionProfile { id, name, days, risks, ... }  // 地域災害プロファイル
 ScoreResult { total, suf, bal, risk, totalKcal, reqKcal, ... }
+FamilyGroup { id, inviteCode, members[], createdBy }  // 家族グループ（Firestore）
 ```
+
+## Firebase / 家族同期アーキテクチャ
+- **認証**: Firebase Anonymous Auth（アプリ起動時に自動匿名サインイン）→ オプションでメールアドレス紐付け
+- **データ同期**: Cloud Firestore（asia-northeast1 / Tokyo）
+- **衝突解決**: Last Write Wins
+- **Firestoreデータ構造**:
+  - `families/{familyId}` — inviteCode, members[], createdBy, createdAt
+  - `families/{familyId}/items/{itemId}` — StockItemフィールド + updatedBy, updatedAt
+  - `families/{familyId}/settings/main` — members[], regionId, updatedBy, updatedAt
+- **セキュリティルール**: 認証済みユーザーのみ読み取り可、membersに含まれるユーザーのみ書き込み可
+- **招待コード**: 6桁（A-Z + 2-9、紛らわしい文字除外）、グループ上限10人
 
 ## 9セクター定義
 | ID | 名前 | 目標配分 | 備考 |
@@ -95,16 +114,40 @@ ScoreResult { total, suf, bal, risk, totalKcal, reqKcal, ... }
 - 日本語UI（i18nフレームワークなし・直接記述）
 
 ## ローンチ前の残タスク
-1. RevenueCatアカウント作成 → API Key取得 → revenueCat.tsに設定
-2. `npx expo install react-native-purchases react-native-google-mobile-ads`
-3. Apple Developer Program登録（年99ドル）
-4. Google Play Consoleアカウント登録（25ドル）
-5. eas.jsonのascAppIdを本番値に差し替え
-6. `npx eas build --platform all --profile production`
-7. `npx eas submit --platform all`
+
+### 完了済み
+- ~~RevenueCatアカウント作成 → API Key取得 → revenueCat.tsに設定~~ ✅
+- ~~Firebase JS SDK 導入 + 家族同期機能実装~~ ✅
+- ~~metro.config.js で firebase/auth の RN ビルド解決~~ ✅
+- ~~旧セクターID "side" の自動マイグレーション~~ ✅
+- ~~アプリアイコン・スプラッシュスクリーン作成~~ ✅
+- ~~プライバシーポリシー・利用規約作成（docs/）~~ ✅
+- ~~PaywallModal にプラポリ・利用規約リンク追加~~ ✅
+- ~~本番用ビルド/サブミットスクリプト追加~~ ✅
+- ~~console.log → logger ユーティリティ（__DEV__制御）~~ ✅
+- ~~OnboardingScreen 5ステップ化（家族構成→地域→プラン→共有→アカウント）~~ ✅
+
+### ローカルで実行が必要
+1. `npx expo install expo-notifications expo-device react-native-purchases react-native-google-mobile-ads`
+2. プラポリ・利用規約を GitHub Pages にデプロイ（docs/ フォルダ使用）
+   - リポジトリ設定 → Pages → Source: main / docs
+   - URL: https://bichiku-folio.github.io/privacy, https://bichiku-folio.github.io/terms
+
+### アカウント登録系
+3. Apple Developer Program 登録（年99ドル）
+4. App Store Connect でアプリ作成 → eas.json の ascAppId を差し替え
+5. RevenueCat で iOS アプリ登録 → revenueCat.ts の API_KEY_IOS を本番値に差し替え
+6. Google Play Console でサービスアカウント JSON を取得（Android 自動サブミット用）
+
+### ビルド・サブミット
+7. `npm run build:all:prod`（EAS Build）
+8. `npm run submit:all`（EAS Submit）
 
 ## よく使うコマンド
 ```bash
+# 依存パッケージインストール（初回 or firebase追加後）
+npm install
+
 # 開発サーバー起動
 npm start
 
@@ -128,6 +171,7 @@ npm run build:android
 | bichiku_onboarded | "true" / null |
 | bichiku_subscription | SubscriptionState |
 | bichiku_ad_state | AdState |
+| bichiku_family_id | string（家族グループID） |
 
 ## 注意点・落とし穴
 - Expo SDK 54 + React 19 + React Native 0.81 の特定バージョン組み合わせで動作確認済み → 安易にアップグレードしない
@@ -137,3 +181,7 @@ npm run build:android
 - 日付入力は yyyymmdd（8桁数字）→ YYYY-MM-DD に正規化
 - 円グラフのパーセンテージは chartSectors のみの合計を分母にすること（drink/bousai/seasoning除外）
 - 旧セクターID（'side'等）のデータが残っている可能性あり → pieDataはchartSectorIds.hasでフィルタ
+- Firebase JS SDK v10（モジュラー）を使用 → @react-native-firebase はExpo Goで使えないため不使用
+- 家族同期中はsubscribeItems/subscribeSettingsのonSnapshotでリアルタイム更新される
+- 家族グループ未参加時はAsyncStorageのみ（オフライン動作可）
+- Firestoreのセキュリティルールはasia-northeast1（東京）にデプロイ済み

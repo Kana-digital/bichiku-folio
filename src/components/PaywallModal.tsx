@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { PRICING } from '../constants/plans';
@@ -132,7 +133,15 @@ export const PaywallModal = ({
             </TouchableOpacity>
             <Text style={styles.termsText}>
               サブスクリプションはいつでもキャンセル可能です。{'\n'}
-              購入すると利用規約・プライバシーポリシーに同意したものとみなされます。
+              購入すると
+              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://bichiku-folio.github.io/terms')}>
+                利用規約
+              </Text>
+              ・
+              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://bichiku-folio.github.io/privacy')}>
+                プライバシーポリシー
+              </Text>
+              に同意したものとみなされます。
             </Text>
           </ScrollView>
         </View>
@@ -304,5 +313,9 @@ const styles = StyleSheet.create({
     color: COLORS.textSub,
     textAlign: 'center',
     lineHeight: 14,
+  },
+  termsLink: {
+    color: COLORS.accent,
+    textDecorationLine: 'underline',
   },
 });
