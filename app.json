@@ -85,9 +85,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D1117"
       },
-      "config": {
-        "googleMobileAdsAppId": "ca-app-pub-1593750663073581~7006772992"
-      }
+      "config": {}
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -95,7 +93,10 @@
     "scheme": "bichiku-folio",
     "plugins": [
       "expo-asset",
-      "react-native-google-mobile-ads"
+      ["react-native-google-mobile-ads", {
+        "androidAppId": "ca-app-pub-1593750663073581~7006772992",
+        "iosAppId": "ca-app-pub-1593750663073581~7006772992"
+      }]
     ],
     "extra": {
       "eas": {
