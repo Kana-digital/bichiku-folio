@@ -74,7 +74,6 @@
             "SKAdNetworkIdentifier": "3rd42ekr43.skadnetwork"
           }
         ],
-        "NSUserTrackingUsageDescription": "広告のパーソナライズのために使用します。許可しない場合でもアプリはご利用いただけます。",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
