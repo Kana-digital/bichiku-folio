@@ -134,11 +134,11 @@ export const PaywallModal = ({
             <Text style={styles.termsText}>
               サブスクリプションはいつでもキャンセル可能です。{'\n'}
               購入すると
-              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://bichiku-folio.github.io/terms')}>
+              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/terms.html')}>
                 利用規約
               </Text>
               ・
-              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://bichiku-folio.github.io/privacy')}>
+              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/privacy.html')}>
                 プライバシーポリシー
               </Text>
               に同意したものとみなされます。

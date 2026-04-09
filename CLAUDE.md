@@ -131,7 +131,7 @@ FamilyGroup { id, inviteCode, members[], createdBy }  // 家族グループ（Fi
 1. `npx expo install expo-notifications expo-device react-native-purchases react-native-google-mobile-ads`
 2. プラポリ・利用規約を GitHub Pages にデプロイ（docs/ フォルダ使用）
    - リポジトリ設定 → Pages → Source: main / docs
-   - URL: https://bichiku-folio.github.io/privacy, https://bichiku-folio.github.io/terms
+   - URL: https://kana-digital.github.io/bichiku-folio/privacy.html, https://kana-digital.github.io/bichiku-folio/terms.html
 
 ### アカウント登録系
 3. Apple Developer Program 登録（年99ドル）
