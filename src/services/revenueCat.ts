@@ -9,7 +9,7 @@
  * 5. API Key 設定済み（Android本番 / iOSはApp Store登録後に差し替え） ✅
  * 6. Google Play Service Account JSON → RevenueCat 設定済み ✅
  * 7. Google Play Console にサービスアカウント招待済み ✅
- * 8. TODO: App Store のアプリを登録し、iOS 本番 API Key に差し替え
+ * 8. App Store 登録済み + iOS 本番 API Key 設定済み ✅
  *
  * 📌 パッケージインストール:
  *   npx expo install react-native-purchases
@@ -24,9 +24,9 @@ import { RC_ENTITLEMENT } from '../constants/plans';
 import { logger } from '../utils/logger';
 
 // ── 設定 ──
-// iOS: App Store登録後に本番キーに差し替え（現在はテスト用）
-// Android: Google Play Store 本番キー設定済み
-const API_KEY_IOS = 'test_FXUbXdIRyYSTIcbSugJxFuTiqfu';
+// iOS: App Store 本番キー設定済み ✅
+// Android: Google Play Store 本番キー設定済み ✅
+const API_KEY_IOS = 'appl_qFFCZvaNihMvTpmcMnMFQmvlqhJ';
 const API_KEY_ANDROID = 'goog_nuKUVImUqftNBCdneJpnvOIfziP';
 
 /** RevenueCat SDK が利用可能かどうか */

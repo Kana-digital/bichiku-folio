@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 12.0.0"
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -30,7 +31,7 @@
     "production": {
       "ios": {
         "appleId": "9kana6@gmail.com",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID"
+        "ascAppId": "6761880751"
       },
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json",
