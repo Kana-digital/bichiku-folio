@@ -4,7 +4,7 @@
  * 📌 セットアップ完了:
  * 1. RevenueCat アカウント作成済み ✅
  * 2. Entitlement: "Bichiku Folio Pro" ✅
- * 3. Offering: Monthly / Yearly / Lifetime ✅
+ * 3. Offering: Monthly / Yearly ✅
  * 4. Google Play Store 接続済み ✅ (com.bichikufolio.app)
  * 5. API Key 設定済み（Android本番 / iOSはApp Store登録後に差し替え） ✅
  * 6. Google Play Service Account JSON → RevenueCat 設定済み ✅

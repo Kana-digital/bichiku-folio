@@ -66,7 +66,7 @@ export interface SubscriptionState {
   planId: PlanId;
   /** RevenueCat entitlement ID (null = ローカルのみ) */
   entitlementId: string | null;
-  /** 有効期限 ISO string (null = free or lifetime) */
+  /** 有効期限 ISO string (null = free) */
   expiresAt: string | null;
 }
 
