@@ -185,3 +185,50 @@ npm run build:android
 - 家族同期中はsubscribeItems/subscribeSettingsのonSnapshotでリアルタイム更新される
 - 家族グループ未参加時はAsyncStorageのみ（オフライン動作可）
 - Firestoreのセキュリティルールはasia-northeast1（東京）にデプロイ済み
+
+## App Store 審査リジェクト対応ログ（2026-04）
+
+### リジェクト理由と対処
+
+**Guideline 2.1.0 — App Completeness（iPadクラッシュ）**
+- iPadでアプリがクラッシュする問題。iPad Simulatorでの動作確認が必須
+- 対処: iPad向けのレイアウト修正 or `app.json` で `"supportsTablet": false` を明示
+
+**Guideline 2.1(b) — In-App Purchase not submitted with binary**
+- RevenueCat連携のIAPをApp Store Connectで作成していなかった
+- 対処: App Store Connect > サブスクリプション で商品を作成し、ビルドと一緒に提出
+
+**Guideline 2.3.10 — Accurate Metadata（スクリーンショットのステータスバー）**
+- Expo GoのUIや非iOS標準のステータスバーがスクショに映っていた
+- 対処: iOS Simulatorで `xcrun simctl status_bar` を使い、9:41表示に統一してからスクショ撮影
+
+### スクリーンショット撮影ワークフロー
+
+1. **デモデータを用意**（`src/utils/demoData.ts` を一時的に作成→useStore.tsのloadLocalData内でAsyncStorageの読み込み前に呼ぶ）
+2. **Simulatorの起動と設定**
+   ```bash
+   # デバイス作成（なければ）
+   xcrun simctl create "iPhone 16 Pro Max" "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
+   xcrun simctl create "iPhone 11 Pro Max" "com.apple.CoreSimulator.SimDeviceType.iPhone-11-Pro-Max"
+   # ステータスバーを9:41に固定
+   xcrun simctl status_bar <UDID> override --time "9:41"
+   # スクリーンショット撮影
+   xcrun simctl io <UDID> screenshot ~/path/to/screenshot.png
+   ```
+3. **撮影後はデモデータファイルを削除し、useStore.tsへの変更もrevert**
+4. **必要サイズ**: 6.9インチ（iPhone 16 Pro Max）と 6.5インチ（iPhone 11 Pro Max）
+
+### スクショ撮影でハマったポイント
+
+- `npx expo start --ios` は `osascript` エラーになることがある → `npx expo start` で起動後、`i` キーでSimulator接続
+- Expo Goモードと Development Build モードが混在する → Metro CLIで `s` キーを押してExpo Goに切り替え
+- 2台目のSimulatorにExpo Goが入っていない場合 → 1台目をシャットダウンしてから `i` キーで2台目に接続
+- デモデータ投入後にアプリが白画面 → `loadDemoData()` を `useStore.ts` の `loadLocalData()` 内、AsyncStorage読み込み**前**に配置する必要がある（App.tsxからだとタイミング問題）
+
+### App Store Connect ブラウザ操作の注意
+
+- SPAのためスクロールすると画面が白くなる → ページリロードか `find` ツール + `ref` クリックで回避
+- Shadow DOMが多用されており、querySelector等が効かない
+- ファイルアップロード（スクリーンショット）は自動操作がブロックされることがある → 手動ドラッグ&ドロップが確実
+- 6.9インチセクションはデフォルトで非表示 → 「メディアマネージャーですべてのサイズを表示」をクリックして展開する必要あり
+- セッション切れが頻発し、Apple IDのiframeログインは自動化困難 → パスワード入力はユーザーに依頼
