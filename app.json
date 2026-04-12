@@ -14,7 +14,7 @@
       "**/*"
     ],
     "ios": {
-      "supportsTabletMode": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.kanadigital.bichikufolio",
       "infoPlist": {
         "GADApplicationIdentifier": "ca-app-pub-1593750663073581~7006772992",
