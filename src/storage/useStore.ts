@@ -283,6 +283,32 @@ export function useStore() {
     return success;
   }, [family]);
 
+  // ── アカウント削除後の状態リセット ──
+  const resetAfterAccountDeletion = useCallback(async () => {
+    // サブスク解除
+    unsubItemsRef.current?.();
+    unsubSettingsRef.current?.();
+    unsubItemsRef.current = null;
+    unsubSettingsRef.current = null;
+
+    // ステート初期化
+    setItems([]);
+    setMembers(DEFAULT_MEMBERS);
+    setRegionId('nankai');
+    setIsOnboarded(false);
+    setFamily(null);
+    setIsSyncing(false);
+    setUid(null);
+
+    // 新しい匿名ユーザーを作成（アプリを使い続けるため）
+    try {
+      const { signInAnon } = getAuthService();
+      await signInAnon();
+    } catch (e) {
+      console.error('[useStore] 再匿名サインイン失敗:', e);
+    }
+  }, []);
+
   return {
     items, members, regionId, isLoaded, isOnboarded,
     loadData: loadLocalData, saveItems, saveMembers, saveRegion, completeOnboarding,
@@ -290,5 +316,6 @@ export function useStore() {
     createFamily: handleCreateFamily,
     joinFamily: handleJoinFamily,
     leaveFamily: handleLeaveFamily,
+    resetAfterAccountDeletion,
   };
 }

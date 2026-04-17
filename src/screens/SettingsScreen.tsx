@@ -34,6 +34,7 @@ interface SettingsScreenProps {
   onCreateFamily?: () => Promise<FamilyGroup | null>;
   onJoinFamily?: (code: string) => Promise<{ success: boolean; error?: string }>;
   onLeaveFamily?: () => Promise<boolean>;
+  onAccountDeleted?: () => Promise<void> | void;
 }
 
 export const SettingsScreen = ({
@@ -49,6 +50,7 @@ export const SettingsScreen = ({
   onCreateFamily,
   onJoinFamily,
   onLeaveFamily,
+  onAccountDeleted,
 }: SettingsScreenProps) => {
   const SUPPORT_EMAIL = 'bichikufolio.support@gmail.com';
   const CONTACT_CATEGORIES = [
@@ -314,7 +316,7 @@ export const SettingsScreen = ({
       )}
 
       {/* 5. 🔑 アカウント */}
-      <AccountSection uid={uid} />
+      <AccountSection uid={uid} onAccountDeleted={onAccountDeleted} />
 
       {/* 6. 📨 お問い合わせ */}
       <View style={styles.sectionCard}>

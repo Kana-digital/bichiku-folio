@@ -26,7 +26,6 @@ import { PaywallModal } from './src/components/PaywallModal';
 import { AdModal } from './src/components/AdModal';
 import { SwipeWrapper } from './src/components/SwipeWrapper';
 import { HeaderRight } from './src/components/HeaderRight';
-import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { initAdMob } from './src/services/admob';
 
 const Tab = createBottomTabNavigator();
@@ -58,6 +57,7 @@ export default function App() {
     saveItems, saveMembers, saveRegion, completeOnboarding,
     uid, family, isSyncing,
     createFamily, joinFamily, leaveFamily,
+    resetAfterAccountDeletion,
   } = useStore();
   const {
     addModalVisible, setAddModalVisible,
@@ -171,34 +171,32 @@ export default function App() {
   // ── 初回起動: オンボーディング画面 ──
   if (!isOnboarded) {
     return (
-      <ErrorBoundary>
-        <SafeAreaProvider>
-          <StatusBar style="light" />
-          <OnboardingScreen
-            members={members}
-            regionId={regionId}
-            onMembersChange={saveMembers}
-            onRegionChange={saveRegion}
-            onComplete={completeOnboarding}
-            isPremium={isPremium}
-            onUpgrade={openPaywall}
-            uid={uid}
-            family={family}
-            onCreateFamily={createFamily}
-            onJoinFamily={joinFamily}
-            onLinkEmail={async (email: string, password: string) => {
-              const { linkEmail } = require('./src/services/authService');
-              return linkEmail(email, password);
-            }}
-          />
-          <PaywallModal
-            visible={paywallVisible}
-            onClose={closePaywall}
-            onPurchase={purchase}
-            onRestore={restore}
-          />
-        </SafeAreaProvider>
-      </ErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <OnboardingScreen
+          members={members}
+          regionId={regionId}
+          onMembersChange={saveMembers}
+          onRegionChange={saveRegion}
+          onComplete={completeOnboarding}
+          isPremium={isPremium}
+          onUpgrade={openPaywall}
+          uid={uid}
+          family={family}
+          onCreateFamily={createFamily}
+          onJoinFamily={joinFamily}
+          onLinkEmail={async (email: string, password: string) => {
+            const { linkEmail } = require('./src/services/authService');
+            return linkEmail(email, password);
+          }}
+        />
+        <PaywallModal
+          visible={paywallVisible}
+          onClose={closePaywall}
+          onPurchase={purchase}
+          onRestore={restore}
+        />
+      </SafeAreaProvider>
     );
   }
 
@@ -207,10 +205,9 @@ export default function App() {
   const headerRight = () => <HeaderRight badgeCount={3} onPress={openInbox} />;
 
   return (
-    <ErrorBoundary>
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <NavigationContainer ref={navigationRef}>
+    <SafeAreaProvider>
+      <StatusBar style="light" />
+      <NavigationContainer ref={navigationRef}>
           <Tab.Navigator screenOptions={TAB_SCREEN_OPTIONS}>
             <Tab.Screen
               name="Home"
@@ -306,6 +303,7 @@ export default function App() {
                     onCreateFamily={createFamily}
                     onJoinFamily={joinFamily}
                     onLeaveFamily={leaveFamily}
+                    onAccountDeleted={resetAfterAccountDeletion}
                   />
                 </SwipeWrapper>
               )}
@@ -345,7 +343,6 @@ export default function App() {
           onRemoveAds={() => { setAdVisible(false); openPaywall(); }}
         />
       </SafeAreaProvider>
-    </ErrorBoundary>
   );
 }
 

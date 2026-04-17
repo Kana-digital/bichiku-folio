@@ -237,3 +237,45 @@ export function subscribeSettings(
     callback({ members: data.members ?? [], regionId: data.regionId ?? 'general' });
   });
 }
+
+// ── アカウント削除用：自分が参加している全グループから脱退（最後の1人なら全削除） ──
+
+export async function purgeUserFromAllFamilies(): Promise<boolean> {
+  const uid = getCurrentUid();
+  if (!uid) return false;
+
+  try {
+    const db = getDb();
+    const q = query(collection(db, 'families'), where('members', 'array-contains', uid));
+    const snap = await getDocs(q);
+
+    for (const familyDoc of snap.docs) {
+      const data = familyDoc.data();
+      const memberList: string[] = data.members ?? [];
+
+      if (memberList.length <= 1) {
+        // 最後の1人 → サブコレクションごと全削除
+        try {
+          const itemsSnap = await getDocs(collection(db, 'families', familyDoc.id, 'items'));
+          const settingsSnap = await getDocs(collection(db, 'families', familyDoc.id, 'settings'));
+          const batch = writeBatch(db);
+          itemsSnap.docs.forEach((d) => batch.delete(d.ref));
+          settingsSnap.docs.forEach((d) => batch.delete(d.ref));
+          batch.delete(familyDoc.ref);
+          await batch.commit();
+          logger.log('[Family] グループ全削除:', familyDoc.id);
+        } catch (e) {
+          console.error('[Family] グループ全削除エラー:', e);
+        }
+      } else {
+        // 他メンバーがいる → 自分だけ抜ける
+        await updateDoc(familyDoc.ref, { members: arrayRemove(uid) });
+        logger.log('[Family] グループ脱退:', familyDoc.id);
+      }
+    }
+    return true;
+  } catch (e) {
+    console.error('[Family] purgeUserFromAllFamilies エラー:', e);
+    return false;
+  }
+}
