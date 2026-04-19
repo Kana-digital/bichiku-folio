@@ -66,14 +66,14 @@ export default function App() {
     handleAddSubmit, handleConsume, handleEditSave, handleEditDelete,
   } = useItemActions(items, saveItems);
   const { navigationRef, navigateToTab } = useTabSwipe();
-  const { isPremium, purchase, restore, recordAction } = useSubscription();
+  const { isPremium, isLoaded: subLoaded, purchase, restore, recordAction } = useSubscription();
 
-  // AdMob SDK 初期化（1回のみ）
+  // AdMob SDK 初期化（サブスク状態ロード完了後、無料ユーザーのみ）
   useEffect(() => {
-    if (!isPremium) {
+    if (subLoaded && !isPremium) {
       initAdMob();
     }
-  }, []);
+  }, [subLoaded, isPremium]);
 
   const [inboxVisible, setInboxVisible] = useState(false);
   const [paywallVisible, setPaywallVisible] = useState(false);

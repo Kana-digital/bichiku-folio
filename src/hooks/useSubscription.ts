@@ -32,7 +32,7 @@ const DEFAULT_AD: AdState = {
  * - 全機能無料で使える
  * - 商品の追加・削除・編集ごとに画像広告を表示
  * - 10回ごとに動画広告を表示
- * - プレミアム会員（¥110/月 or ¥980/年）は広告なし
+ * - プレミアム会員（¥100/月 or ¥1,000/年）は広告なし
  */
 export function useSubscription() {
   const [sub, setSub] = useState<SubscriptionState>(DEFAULT_SUB);
@@ -53,7 +53,12 @@ export function useSubscription() {
         ]);
         if (rawSub) {
           const parsed: SubscriptionState = JSON.parse(rawSub);
-          if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
+          // 開発用ローカル課金が残っている場合はリセット
+          if (parsed.entitlementId?.startsWith('local_')) {
+            logger.warn('[Subscription] ローカル課金状態を検出 → リセット');
+            await AsyncStorage.setItem(SUB_KEY, JSON.stringify(DEFAULT_SUB));
+            setSub(DEFAULT_SUB);
+          } else if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
             const expired = { ...DEFAULT_SUB };
             await AsyncStorage.setItem(SUB_KEY, JSON.stringify(expired));
             setSub(expired);
@@ -139,21 +144,9 @@ export function useSubscription() {
         }
       }
 
-      // SDK未導入時のローカルフォールバック（開発用）
-      const expiresAt = new Date();
-      if (period === 'monthly') {
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
-      } else {
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-      }
-      const newSub: SubscriptionState = {
-        planId: 'premium',
-        entitlementId: `local_${period}`,
-        expiresAt: expiresAt.toISOString(),
-      };
-      setSub(newSub);
-      await AsyncStorage.setItem(SUB_KEY, JSON.stringify(newSub));
-      return true;
+      // SDK未導入時 → 購入不可（エラーとして返す）
+      logger.warn('[Purchase] RevenueCat SDKが利用できないため購入できません');
+      return false;
     },
     [],
   );

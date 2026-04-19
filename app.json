@@ -2,7 +2,7 @@
   "expo": {
     "name": "ビチクフォリオ",
     "slug": "bichiku-folio",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -93,7 +93,7 @@
     "plugins": [
       "expo-asset",
       ["react-native-google-mobile-ads", {
-        "androidAppId": "ca-app-pub-1593750663073581~7006772992",
+        "androidAppId": "ca-app-pub-1593750663073581~2996149871",
         "iosAppId": "ca-app-pub-1593750663073581~7006772992"
       }]
     ],

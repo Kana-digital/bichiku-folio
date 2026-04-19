@@ -2,3 +2,4 @@ node_modules/
 .expo/
 .DS_Store
 dist-test/
+google-play-service-account.json

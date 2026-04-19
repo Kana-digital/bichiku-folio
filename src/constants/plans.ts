@@ -22,8 +22,8 @@ export const RC_ENTITLEMENT = 'Bichiku Folio Pro';
 
 /** 価格表示用 */
 export const PRICING = {
-  monthly: { label: '月額', price: 110, display: '¥110/月' },
-  yearly: { label: '年額（一括）', price: 980, display: '¥980/年', savings: '26%お得' },
+  monthly: { label: '月額', price: 100, display: '¥100/月' },
+  yearly: { label: '年額（一括）', price: 1000, display: '¥1,000/年', savings: '17%お得' },
 } as const;
 
 /**

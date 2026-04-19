@@ -40,7 +40,7 @@ const AD_UNIT_IDS = {
       : 'ca-app-pub-1593750663073581/4689602975',        // 本番
     android: __DEV__
       ? 'ca-app-pub-3940256099942544/1033173712'         // テスト用
-      : 'ca-app-pub-1593750663073581/4689602975',        // 本番（Android登録後に差替）
+      : 'ca-app-pub-1593750663073581/4159081940',        // 本番 Android
   }) ?? '',
   rewardedInterstitial: Platform.select({
     ios: __DEV__
@@ -48,7 +48,7 @@ const AD_UNIT_IDS = {
       : 'ca-app-pub-1593750663073581/9688776659',        // 本番
     android: __DEV__
       ? 'ca-app-pub-3940256099942544/5354046379'         // テスト用
-      : 'ca-app-pub-1593750663073581/9688776659',        // 本番（Android登録後に差替）
+      : 'ca-app-pub-1593750663073581/3283937798',        // 本番 Android
   }) ?? '',
 };
 

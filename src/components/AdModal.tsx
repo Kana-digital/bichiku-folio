@@ -158,7 +158,7 @@ export const AdModal = ({
 
             <TouchableOpacity style={styles.removeAdsBtn} onPress={onRemoveAds}>
               <Text style={styles.removeAdsBtnText}>
-                ¥110/月で広告を非表示にする →
+                ¥100/月で広告を非表示にする →
               </Text>
             </TouchableOpacity>
           </View>

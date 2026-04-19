@@ -318,7 +318,26 @@ export const SettingsScreen = ({
       {/* 5. 🔑 アカウント */}
       <AccountSection uid={uid} onAccountDeleted={onAccountDeleted} />
 
-      {/* 6. 📨 お問い合わせ */}
+      {/* 6. 📄 法的情報 */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.cardTitle}>📄 法的情報</Text>
+        <TouchableOpacity
+          style={styles.legalLink}
+          onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/terms.html')}
+        >
+          <Text style={styles.legalLinkText}>利用規約</Text>
+          <Text style={styles.legalLinkArrow}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.legalLink, { borderBottomWidth: 0 }]}
+          onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/privacy.html')}
+        >
+          <Text style={styles.legalLinkText}>プライバシーポリシー</Text>
+          <Text style={styles.legalLinkArrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 7. 📨 お問い合わせ */}
       <View style={styles.sectionCard}>
         <Text style={styles.cardTitle}>📨 お問い合わせ</Text>
         <Text style={styles.cardSubtitle}>
@@ -705,5 +724,23 @@ const styles = StyleSheet.create({
     color: COLORS.textSub,
     marginTop: 6,
     textAlign: 'center',
+  },
+
+  // ── 法的情報 ──
+  legalLink: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  legalLinkText: {
+    fontSize: 13,
+    color: COLORS.text,
+  },
+  legalLinkArrow: {
+    fontSize: 18,
+    color: COLORS.textSub,
   },
 });

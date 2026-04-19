@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Linking,
+  Alert,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { PRICING } from '../constants/plans';
@@ -37,8 +38,24 @@ export const PaywallModal = ({
   const handlePurchase = async () => {
     setLoading(true);
     try {
-      const success = await onPurchase(selected);
-      if (success) onClose();
+      const timeoutPromise = new Promise<boolean>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 30000)
+      );
+      const success = await Promise.race([onPurchase(selected), timeoutPromise]);
+      if (success) {
+        onClose();
+      } else {
+        Alert.alert(
+          '購入できませんでした',
+          '購入がキャンセルされたか、処理中にエラーが発生しました。もう一度お試しください。',
+        );
+      }
+    } catch (e: any) {
+      if (e.message === 'timeout') {
+        Alert.alert('タイムアウト', '購入処理に時間がかかっています。通信環境を確認してもう一度お試しください。');
+      } else {
+        Alert.alert('エラー', '購入処理中にエラーが発生しました。もう一度お試しください。');
+      }
     } finally {
       setLoading(false);
     }
@@ -48,7 +65,13 @@ export const PaywallModal = ({
     setLoading(true);
     try {
       const success = await onRestore();
-      if (success) onClose();
+      if (success) {
+        onClose();
+      } else {
+        Alert.alert('復元できませんでした', '過去の購入が見つかりませんでした。');
+      }
+    } catch {
+      Alert.alert('エラー', '復元処理中にエラーが発生しました。');
     } finally {
       setLoading(false);
     }
@@ -64,7 +87,7 @@ export const PaywallModal = ({
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
             {/* ヘッダー */}
-            <Text style={styles.premiumBadge}>✦ PREMIUM</Text>
+            <Text style={styles.premiumBadge}>✦ 備蓄フォリオ Pro</Text>
             <Text style={styles.title}>広告なしで快適に</Text>
             <Text style={styles.subtitle}>
               すべての機能はそのまま無料。{'\n'}
@@ -132,16 +155,16 @@ export const PaywallModal = ({
               <Text style={styles.restoreText}>購入を復元</Text>
             </TouchableOpacity>
             <Text style={styles.termsText}>
-              サブスクリプションはいつでもキャンセル可能です。{'\n'}
-              購入すると
+              サブスクリプションはiTunesアカウントに請求されます。{'\n'}
+              現在の期間終了の24時間前までにキャンセルしない限り自動更新されます。{'\n'}
+              設定アプリ {'>'} Apple ID {'>'} サブスクリプションから管理・キャンセルできます。{'\n\n'}
               <Text style={styles.termsLink} onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/terms.html')}>
                 利用規約
               </Text>
-              ・
+              {'  '}
               <Text style={styles.termsLink} onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/privacy.html')}>
                 プライバシーポリシー
               </Text>
-              に同意したものとみなされます。
             </Text>
           </ScrollView>
         </View>
