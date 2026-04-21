@@ -32,7 +32,7 @@ const DEFAULT_AD: AdState = {
  * - 全機能無料で使える
  * - 商品の追加・削除・編集ごとに画像広告を表示
  * - 10回ごとに動画広告を表示
- * - プレミアム会員（¥100/月 or ¥1,000/年）は広告なし
+ * - プレミアム会員（¥110/月 or ¥980/年）は広告なし
  */
 export function useSubscription() {
   const [sub, setSub] = useState<SubscriptionState>(DEFAULT_SUB);

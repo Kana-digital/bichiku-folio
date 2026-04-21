@@ -122,9 +122,17 @@ export async function restorePurchases(): Promise<boolean> {
   if (!isAvailable || !Purchases) return false;
   try {
     const customerInfo = await Purchases.restorePurchases();
-    return !!customerInfo.entitlements.active[RC_ENTITLEMENT];
+    const hasEntitlement = !!customerInfo.entitlements.active[RC_ENTITLEMENT];
+    if (hasEntitlement) return true;
+    // フォールバック: entitlement名が異なる場合でも、何かアクティブなものがあれば成功
+    const activeKeys = Object.keys(customerInfo.entitlements.active);
+    if (activeKeys.length > 0) {
+      logger.log(`[RevenueCat] 復元: 別名のentitlementがアクティブ (${activeKeys.join(', ')}) → 成功`);
+      return true;
+    }
+    return false;
   } catch (e) {
-    console.error('[RevenueCat] 復元エラー:', e);
+    logger.error('[RevenueCat] 復元エラー:', e);
     return false;
   }
 }
@@ -142,12 +150,19 @@ export async function checkSubscription(): Promise<{
   try {
     const customerInfo = await Purchases.getCustomerInfo();
     const entitlement = customerInfo.entitlements.active[RC_ENTITLEMENT];
-    return {
-      isPremium: !!entitlement,
-      expiresAt: entitlement?.expirationDate ?? null,
-    };
+    if (entitlement) {
+      return { isPremium: true, expiresAt: entitlement.expirationDate ?? null };
+    }
+    // フォールバック: entitlement名が異なる場合
+    const activeKeys = Object.keys(customerInfo.entitlements.active);
+    if (activeKeys.length > 0) {
+      const firstActive = customerInfo.entitlements.active[activeKeys[0]];
+      logger.log(`[RevenueCat] 状態確認: 別名のentitlement (${activeKeys.join(', ')}) がアクティブ`);
+      return { isPremium: true, expiresAt: firstActive?.expirationDate ?? null };
+    }
+    return { isPremium: false, expiresAt: null };
   } catch (e) {
-    console.error('[RevenueCat] 状態確認エラー:', e);
+    logger.error('[RevenueCat] 状態確認エラー:', e);
     return { isPremium: false, expiresAt: null };
   }
 }

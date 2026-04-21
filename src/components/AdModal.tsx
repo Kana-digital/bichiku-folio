@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
-import { AD_CONFIG } from '../constants/plans';
+import { AD_CONFIG, PRICING } from '../constants/plans';
 import {
   isAdMobAvailable,
   showInterstitial,
@@ -158,7 +158,7 @@ export const AdModal = ({
 
             <TouchableOpacity style={styles.removeAdsBtn} onPress={onRemoveAds}>
               <Text style={styles.removeAdsBtnText}>
-                ¥100/月で広告を非表示にする →
+                ¥{PRICING.monthly.price}/月で広告を非表示にする →
               </Text>
             </TouchableOpacity>
           </View>

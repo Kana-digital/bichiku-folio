@@ -350,7 +350,7 @@ export const OnboardingScreen = ({
         <View style={[styles.planCard, isPremium && styles.planCardSelected, { marginTop: 8 }]}>
           <View style={styles.planHeader}>
             <Text style={[styles.planName, { color: COLORS.accent }]}>✦ PREMIUM</Text>
-            <Text style={styles.planPrice}>¥100/月 or ¥1,000/年</Text>
+            <Text style={styles.planPrice}>¥110/月 or ¥980/年</Text>
           </View>
           <Text style={styles.planFeature}>広告なしで快適に利用</Text>
           <Text style={styles.planFeature}>すべての機能が使えます</Text>
