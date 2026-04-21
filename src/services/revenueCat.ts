@@ -60,12 +60,23 @@ export async function initRevenueCat(): Promise<void> {
  * 現在の Offering を取得
  */
 export async function getOfferings() {
-  if (!isAvailable || !Purchases) return null;
+  if (!isAvailable || !Purchases) {
+    logger.error('[RevenueCat] SDK未初期化のためOffering取得不可');
+    return null;
+  }
   try {
     const offerings = await Purchases.getOfferings();
+    if (!offerings.current) {
+      logger.error('[RevenueCat] current offeringが見つかりません');
+      return null;
+    }
+    logger.log(`[RevenueCat] Offering取得成功: ${offerings.current.availablePackages.length}パッケージ`);
+    offerings.current.availablePackages.forEach((pkg: any) => {
+      logger.log(`  - ${pkg.identifier} (${pkg.packageType}): ${pkg.product?.priceString ?? 'N/A'}`);
+    });
     return offerings.current;
   } catch (e) {
-    console.error('[RevenueCat] Offerings取得エラー:', e);
+    logger.error('[RevenueCat] Offerings取得エラー:', e);
     return null;
   }
 }
@@ -74,13 +85,31 @@ export async function getOfferings() {
  * パッケージを購入
  */
 export async function purchasePackage(pkg: any): Promise<boolean> {
-  if (!isAvailable || !Purchases) return false;
+  if (!isAvailable || !Purchases) {
+    logger.error('[RevenueCat] SDK未初期化のため購入できません');
+    return false;
+  }
   try {
+    logger.log(`[RevenueCat] 購入開始: ${pkg.identifier}`);
     const { customerInfo } = await Purchases.purchasePackage(pkg);
-    return !!customerInfo.entitlements.active[RC_ENTITLEMENT];
+    const hasEntitlement = !!customerInfo.entitlements.active[RC_ENTITLEMENT];
+    logger.log(`[RevenueCat] 購入結果: entitlement=${hasEntitlement}`);
+    if (!hasEntitlement) {
+      // エンタイトルメント名が異なる場合のフォールバック
+      const activeKeys = Object.keys(customerInfo.entitlements.active);
+      logger.log(`[RevenueCat] アクティブなentitlements: ${activeKeys.join(', ')}`);
+      if (activeKeys.length > 0) {
+        logger.log('[RevenueCat] 別名のentitlementがアクティブ → 成功として扱う');
+        return true;
+      }
+    }
+    return hasEntitlement;
   } catch (e: any) {
-    if (!e.userCancelled) {
-      console.error('[RevenueCat] 購入エラー:', e);
+    if (e.userCancelled) {
+      logger.log('[RevenueCat] ユーザーがキャンセル');
+    } else {
+      logger.error('[RevenueCat] 購入エラー:', e);
+      logger.error('[RevenueCat] エラーコード:', e.code, 'メッセージ:', e.message);
     }
     return false;
   }

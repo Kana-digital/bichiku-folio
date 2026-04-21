@@ -120,12 +120,34 @@ export function useSubscription() {
       if (isRCAvailable()) {
         try {
           const offering = await getOfferings();
-          if (!offering) return false;
-          const pkgId = period === 'monthly' ? '$rc_monthly' : '$rc_annual';
-          const pkg = offering.availablePackages.find(
-            (p: any) => p.packageType === pkgId || p.identifier === pkgId
-          ) ?? offering.availablePackages[0];
-          if (!pkg) return false;
+          if (!offering) {
+            logger.error('[Purchase] Offeringが取得できませんでした');
+            return false;
+          }
+
+          // パッケージを探す: identifier → packageType の順で検索
+          const identifier = period === 'monthly' ? '$rc_monthly' : '$rc_annual';
+          const packageType = period === 'monthly' ? 'MONTHLY' : 'ANNUAL';
+
+          let pkg = offering.availablePackages.find(
+            (p: any) => p.identifier === identifier
+          );
+          if (!pkg) {
+            pkg = offering.availablePackages.find(
+              (p: any) => p.packageType === packageType
+            );
+          }
+          // それでも見つからない場合、利用可能な最初のパッケージを使う
+          if (!pkg && offering.availablePackages.length > 0) {
+            logger.warn('[Purchase] 指定パッケージが見つからないため最初のパッケージを使用');
+            pkg = offering.availablePackages[0];
+          }
+          if (!pkg) {
+            logger.error('[Purchase] 利用可能なパッケージがありません');
+            return false;
+          }
+
+          logger.log(`[Purchase] パッケージ選択: ${pkg.identifier} (${pkg.packageType})`);
           const success = await purchasePackage(pkg);
           if (success) {
             const rcStatus = await checkSubscription();

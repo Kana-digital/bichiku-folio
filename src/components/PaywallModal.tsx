@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Platform,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { PRICING } from '../constants/plans';
@@ -39,22 +40,33 @@ export const PaywallModal = ({
     setLoading(true);
     try {
       const timeoutPromise = new Promise<boolean>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 30000)
+        setTimeout(() => reject(new Error('timeout')), 60000)
       );
       const success = await Promise.race([onPurchase(selected), timeoutPromise]);
       if (success) {
+        Alert.alert('購入完了', '広告が非表示になりました。ありがとうございます！');
         onClose();
       } else {
         Alert.alert(
           '購入できませんでした',
-          '購入がキャンセルされたか、処理中にエラーが発生しました。もう一度お試しください。',
+          '購入がキャンセルされたか、ストアとの通信でエラーが発生しました。' +
+          '\n\n通信環境をご確認の上、もう一度お試しください。' +
+          '\n\n問題が続く場合は、設定 > お問い合わせからご連絡ください。',
         );
       }
     } catch (e: any) {
       if (e.message === 'timeout') {
-        Alert.alert('タイムアウト', '購入処理に時間がかかっています。通信環境を確認してもう一度お試しください。');
+        Alert.alert(
+          'タイムアウト',
+          '購入処理に時間がかかっています。通信環境を確認してもう一度お試しください。' +
+          '\n\nすでに購入済みの場合は「購入を復元」をお試しください。',
+        );
       } else {
-        Alert.alert('エラー', '購入処理中にエラーが発生しました。もう一度お試しください。');
+        Alert.alert(
+          'エラー',
+          '購入処理中にエラーが発生しました。' +
+          '\n\n通信環境をご確認の上、もう一度お試しください。',
+        );
       }
     } finally {
       setLoading(false);
@@ -107,6 +119,9 @@ export const PaywallModal = ({
               ))}
             </View>
 
+            {/* サブスクリプション名 */}
+            <Text style={styles.subscriptionName}>備蓄フォリオ Pro（広告非表示）</Text>
+
             {/* プラン選択 */}
             <View style={styles.planRow}>
               <TouchableOpacity
@@ -120,6 +135,7 @@ export const PaywallModal = ({
                 )}
                 <Text style={styles.planPeriod}>{PRICING.yearly.label}</Text>
                 <Text style={styles.planPrice}>{PRICING.yearly.display}</Text>
+                <Text style={styles.planDuration}>期間: 1年間（自動更新）</Text>
                 <Text style={styles.planMonthly}>
                   月あたり ¥{Math.round(PRICING.yearly.price / 12)}
                 </Text>
@@ -131,6 +147,7 @@ export const PaywallModal = ({
               >
                 <Text style={styles.planPeriod}>{PRICING.monthly.label}</Text>
                 <Text style={styles.planPrice}>{PRICING.monthly.display}</Text>
+                <Text style={styles.planDuration}>期間: 1ヶ月間（自動更新）</Text>
                 <Text style={styles.planMonthly}> </Text>
               </TouchableOpacity>
             </View>
@@ -145,27 +162,43 @@ export const PaywallModal = ({
                 <ActivityIndicator color="#000" />
               ) : (
                 <Text style={styles.purchaseBtnText}>
-                  広告を非表示にする
+                  {selected === 'monthly'
+                    ? `¥${PRICING.monthly.price}/月で広告を非表示にする`
+                    : `¥${PRICING.yearly.price}/年で広告を非表示にする`}
                 </Text>
               )}
             </TouchableOpacity>
 
-            {/* 復元・利用規約 */}
+            {/* 復元 */}
             <TouchableOpacity onPress={handleRestore} disabled={loading}>
               <Text style={styles.restoreText}>購入を復元</Text>
             </TouchableOpacity>
-            <Text style={styles.termsText}>
-              サブスクリプションはiTunesアカウントに請求されます。{'\n'}
-              現在の期間終了の24時間前までにキャンセルしない限り自動更新されます。{'\n'}
-              設定アプリ {'>'} Apple ID {'>'} サブスクリプションから管理・キャンセルできます。{'\n\n'}
-              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/terms.html')}>
-                利用規約
+
+            {/* サブスクリプション説明（Apple Guideline 3.1.2(c) 必須項目） */}
+            <View style={styles.subscriptionTerms}>
+              <Text style={styles.termsHeader}>サブスクリプションについて</Text>
+              <Text style={styles.termsText}>
+                • サブスクリプション名: 備蓄フォリオ Pro{'\n'}
+                • 月額プラン: ¥{PRICING.monthly.price}/月（1ヶ月ごとの自動更新）{'\n'}
+                • 年額プラン: ¥{PRICING.yearly.price}/年（1年ごとの自動更新）{'\n'}
+                • お支払いは{Platform.OS === 'ios' ? 'Apple ID' : 'Google Play'}アカウントに請求されます{'\n'}
+                • 現在の期間終了の24時間前までにキャンセルしない限り自動更新されます{'\n'}
+                • {Platform.OS === 'ios'
+                    ? '設定アプリ > Apple ID > サブスクリプション'
+                    : 'Google Play ストア > お支払いと定期購入'}から管理・キャンセルできます
               </Text>
-              {'  '}
-              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/privacy.html')}>
-                プライバシーポリシー
-              </Text>
-            </Text>
+            </View>
+
+            {/* 利用規約・プライバシーポリシー */}
+            <View style={styles.legalLinks}>
+              <TouchableOpacity onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/terms.html')}>
+                <Text style={styles.termsLink}>利用規約（EULA）</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalSeparator}>｜</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://kana-digital.github.io/bichiku-folio/privacy.html')}>
+                <Text style={styles.termsLink}>プライバシーポリシー</Text>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </View>
       </View>
@@ -324,6 +357,20 @@ const styles = StyleSheet.create({
     color: '#000',
   },
 
+  // ── サブスクリプション名 ──
+  subscriptionName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSub,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  planDuration: {
+    fontSize: 9,
+    color: COLORS.textSub,
+    marginTop: 2,
+  },
+
   // ── フッター ──
   restoreText: {
     fontSize: 12,
@@ -331,13 +378,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
   },
+  subscriptionTerms: {
+    backgroundColor: COLORS.bg,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  termsHeader: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 6,
+  },
   termsText: {
     fontSize: 9,
     color: COLORS.textSub,
-    textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 16,
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  legalSeparator: {
+    fontSize: 9,
+    color: COLORS.textSub,
+    marginHorizontal: 4,
   },
   termsLink: {
+    fontSize: 10,
     color: COLORS.accent,
     textDecorationLine: 'underline',
   },
